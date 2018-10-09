@@ -1,3 +1,6 @@
+# ide files
+.idea
+
 # binary files
 .pyc
 .so
@@ -7,6 +10,8 @@
 # local data
 .log
 .db
+dist
+*.egg-info/
 
 # dependencies
 .tar.gz
