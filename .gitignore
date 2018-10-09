@@ -1,0 +1,15 @@
+# binary files
+.pyc
+.so
+.a
+.o
+
+# local data
+.log
+.db
+
+# dependencies
+.tar.gz
+
+# local dev
+workspace
