@@ -2,19 +2,20 @@
 .idea
 
 # binary files
-.pyc
-.so
-.a
-.o
+*.pyc
+*.so
+*.a
+*.o
 
 # local data
-.log
-.db
+*.log
+*.db
+db.sqlite3
 dist
 *.egg-info/
 
 # dependencies
-.tar.gz
+*.tar.gz
 
 # local dev
 workspace

@@ -3,13 +3,13 @@ import os
 
 
 MSA_CONFIG_DEFAULT = {
-    'DEBUG'               : True,
-    'MSA_DATA_DIR'        : None,
-    'STATIC_URL'          : '/django-static/',
-    'MSA_STATIC_ROOT'     : 'django-static/',
-    'MSA_HTTPS'           : False,
-    'MSA_DEFAULT_DB'      : True,
-    'MSA_LOGGING'         : True,
+    'DEBUG': True,
+    'MSA_DATA_DIR': None,
+    'STATIC_URL': '/django-static/',
+    'MSA_STATIC_ROOT': 'django-static/',
+    'MSA_HTTPS': False,
+    'MSA_DEFAULT_DB': True,
+    'MSA_LOGGING': True,
     'MSA_ALLOW_ADMIN_SITE': False,
 }
 
@@ -22,8 +22,8 @@ MSA_CONFIG_DEVELOPMENT_DEFAULT.update({
 
 MSA_CONFIG_PRODUCTION_DEFAULT = MSA_CONFIG_DEFAULT.copy()
 MSA_CONFIG_PRODUCTION_DEFAULT.update({
-    'DEBUG'               : False,
-    'MSA_HTTPS'           : True,
+    'DEBUG': False,
+    'MSA_HTTPS': True,
 })
 
 
@@ -71,7 +71,6 @@ class MSASettings:
             self.settings['MSA_DATA_DIR'] = msa_data_dir
         else:
             self.settings['MSA_DATA_DIR'] = os.getcwd()
-            #self.settings['MSA_DATA_DIR'] = self.settings.get('BASE_DIR')
 
 
     def _update_debug(self):
@@ -83,7 +82,7 @@ class MSASettings:
         it is empty.
         '''
         if debug and len(self.settings['ALLOWED_HOSTS']) == 0:
-            self.settings['ALLOWED_HOSTS'] = ['*',]
+            self.settings['ALLOWED_HOSTS'] = ['*']
 
 
     def _update_static(self):
@@ -189,10 +188,9 @@ class MSASettings:
 
     def _update_rest_framework(self):
         self.settings['REST_FRAMEWORK'] = {
-            'DEFAULT_PERMISSION_CLASSES': ('deepera.msa.permissions.DenyAny',),
+            'DEFAULT_PERMISSION_CLASSES': ('rango.frame.permissions.DenyAny',),
             'DEFAULT_AUTHENTICATION_CLASSES': (),
-            'EXCEPTION_HANDLER': 'deepera.msa.views.exception_handler',
-        }
+            'EXCEPTION_HANDLER': 'rango.frame.views.exception_handler'}
 
 
     def _update_allow_admin_site(self):

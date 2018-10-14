@@ -1,16 +1,18 @@
-import logging, json, datetime
+import json
+import logging
 from uuid import uuid1
+from django.http import Http404
+from django.core.exceptions import PermissionDenied
+from rest_framework import exceptions
 from rest_framework.response import Response
-from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
-from rest_framework.views import exception_handler as default_exception_handler
+from rest_framework.views import APIView, set_rollback
 from rest_framework.utils.encoders import JSONEncoder
-from rest_framework import serializers
-from .utils import get_ip
+from .utils.ipware import get_ip
 
 
 
-class APIViewLoggingMixin(object):
+class LoggedAPIView(APIView):
     api_logger = logging.getLogger('API')
 
 
@@ -44,11 +46,11 @@ class APIViewLoggingMixin(object):
 
     def _log_request(self, request):
         info = {
-            'method'        : request.method.upper(),
-            'uri'           : request.build_absolute_uri(),
-            'content_type'  : request.content_type,
-            'authorization' : request.META.get('HTTP_AUTHORIZATION'),
-            'data'          : str(request.data),
+            'method': request.method.upper(),
+            'uri': request.build_absolute_uri(),
+            'content_type': request.content_type,
+            'authorization': request.META.get('HTTP_AUTHORIZATION'),
+            'data': str(request.data),
         }
         info_str = self.json_dump(info)
         msg = '{}|{}|{}'.format(self._log_id, 'REQUEST', info_str)
@@ -57,9 +59,9 @@ class APIViewLoggingMixin(object):
 
     def _log_authentication(self, request):
         info = {
-            'user_type'     : type(request.user).__name__,
-            'id'            : request.user.id,
-            'detail'        : str(request.user),
+            'user_type': type(request.user).__name__,
+            'id': request.user.id,
+            'detail': str(request.user),
         }
         info_str = self.json_dump(info)
         msg = '{}|{}|{}'.format(self._log_id, 'AUTH', info_str)
@@ -68,8 +70,8 @@ class APIViewLoggingMixin(object):
 
     def _log_response(self, response):
         info = {
-            'status'        : (response.status_code, response.status_text),
-            'content'       : response.data,
+            'status': (response.status_code, response.status_text),
+            'content': response.data,
         }
         info_str = self.json_dump(info)
         msg = '{}|{}|{}'.format(self._log_id, 'RESPONSE', info_str)
@@ -78,21 +80,16 @@ class APIViewLoggingMixin(object):
 
     def _extract_raw_request_info(self, request):
         info = {
-            'method'       : request.method,
-            'uri'          : request.build_absolute_uri(),
-            'content_type' : request.META.get('CONTENT_TYPE', ''),
-            'remote_addr'  : get_ip(request),
+            'method': request.method,
+            'uri': request.build_absolute_uri(),
+            'content_type': request.META.get('CONTENT_TYPE', ''),
+            'remote_addr': get_ip(request),
         }
         return info
 
 
     def json_dump(self, data):
         return json.dumps(data, sort_keys=True, cls=JSONEncoder)
-
-
-
-class LoggedAPIView(APIViewLoggingMixin, APIView):
-    pass
 
 
 
@@ -106,5 +103,36 @@ class StaticView(LoggedAPIView):
 
 
 
-def exception_handler(e, context):
-    raise e
+def exception_handler(exc, context):
+    """
+    Returns the response that should be used for any given exception.
+
+    By default we handle the REST framework `APIException`, and also
+    Django's built-in `Http404` and `PermissionDenied` exceptions.
+
+    Any unhandled exceptions may return `None`, which will cause a 500 error
+    to be raised.
+    """
+    if isinstance(exc, Http404):
+        exc = exceptions.NotFound()
+    elif isinstance(exc, PermissionDenied):
+        exc = exceptions.PermissionDenied()
+
+    if isinstance(exc, exceptions.APIException):
+        headers = {}
+        auth_header = getattr(exc, 'auth_header', None)
+        if auth_header:
+            headers['WWW-Authenticate'] = auth_header
+        wait = getattr(exc, 'wait', None)
+        if wait:
+            headers['Retry-After'] = '%d' % wait
+
+        if isinstance(exc.detail, (list, dict)):
+            data = exc.detail
+        else:
+            data = {'details': exc.detail}
+
+        set_rollback()
+        return Response(data, status=exc.status_code, headers=headers)
+
+    return None
