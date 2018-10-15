@@ -1,3 +1,12 @@
-from django.shortcuts import render
+import datetime
+from rest_framework.response import Response
+from .common import DemoAPIView
 
-# Create your views here.
+
+
+class PingView(DemoAPIView):
+
+
+    def get(self, request, format= None):
+        result = dict(time=datetime.datetime.now())
+        return Response(result)
