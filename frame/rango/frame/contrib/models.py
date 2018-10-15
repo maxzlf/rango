@@ -39,7 +39,7 @@ class SToken(models.Model):
         #
         # Also see corresponding ticket:
         # https://github.com/tomchristie/django-rest-framework/issues/705
-        abstract = ('rango.frame.contrib.authstoken'
+        abstract = ('rango.frame.contrib'
                     not in settings.INSTALLED_APPS)
         verbose_name = 'SToken'
         verbose_name_plural = 'STokens'

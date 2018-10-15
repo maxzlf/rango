@@ -4,7 +4,7 @@ from rest_framework.authentication import BaseAuthentication
 from rest_framework.authentication import get_authorization_header
 from rest_framework.exceptions import AuthenticationFailed
 
-from ...utils.ipware import get_ip
+from frame.rango.frame.utils.ipware import get_ip
 from .models import SToken
 
 
