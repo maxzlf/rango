@@ -1,10 +1,12 @@
 import datetime
 from rest_framework.response import Response
 from .common import DemoAPIView
+from .permissions import AllowAny
 
 
 
 class PingView(DemoAPIView):
+    permission_classes = (AllowAny,)
 
 
     def get(self, request, format= None):

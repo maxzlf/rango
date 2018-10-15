@@ -1,8 +1,8 @@
 from rest_framework import serializers
 from rest_framework.generics import GenericAPIView
 from rest_framework.viewsets import ModelViewSet
-from rango.frame.permissions import DenyAny
 from rango.frame.views import LoggedAPIView
+from .permissions import DenyAny
 
 
 
