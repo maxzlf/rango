@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import User, SToken
+from .models import User, SToken, Trash
 
 
 
@@ -21,3 +21,12 @@ class STokenAdmin(admin.ModelAdmin):
 
 
 admin.site.register(SToken, STokenAdmin)
+
+
+
+class TrashAdmin(admin.ModelAdmin):
+    list_display = ('id', 'model', 'content', 'comment', 'create_time')
+    ordering = ('-create_time',)
+
+
+admin.site.register(Trash, TrashAdmin)
