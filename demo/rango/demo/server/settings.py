@@ -123,8 +123,8 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
-ALLOWED_HOSTS = ['*']
-user_msa_config = dict(DEBUG=False)
+ALLOWED_HOSTS = []
+user_msa_config = dict(DEBUG=True)
 update_django_settings(locals(), user_msa_config)
 
 

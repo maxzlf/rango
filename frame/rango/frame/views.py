@@ -136,7 +136,7 @@ def exception_handler(exc, context):
                         details=exc.details if exc.details
                         else traceback.format_exc())
             if not settings.DEBUG:
-                del  data['details']
+                del data['details']
         else:
             if isinstance(exc.detail, (list, dict)):
                 data = exc.detail
