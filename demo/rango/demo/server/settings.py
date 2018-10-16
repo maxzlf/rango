@@ -27,8 +27,6 @@ SECRET_KEY = 'j(+&c80rh=elglwb7oi(l(j#onl@$n+ate7lvj5#fwi14h%*op'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
-
 
 # Application definition
 
@@ -125,8 +123,9 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
-
-update_django_settings(locals())
+ALLOWED_HOSTS = ['*']
+user_msa_config = dict(DEBUG=False)
+update_django_settings(locals(), user_msa_config)
 
 
 INSTALLED_APPS += [

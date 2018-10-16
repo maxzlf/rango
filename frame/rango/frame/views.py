@@ -2,6 +2,7 @@ import json
 import logging
 from uuid import uuid1
 from django.http import Http404
+from django.conf import settings
 from django.core.exceptions import PermissionDenied
 from rest_framework import exceptions
 from rest_framework.response import Response
@@ -9,6 +10,8 @@ from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView, set_rollback
 from rest_framework.utils.encoders import JSONEncoder
 from .utils.ipware import get_ip
+from . import errors
+import traceback
 
 
 
@@ -127,10 +130,18 @@ def exception_handler(exc, context):
         if wait:
             headers['Retry-After'] = '%d' % wait
 
-        if isinstance(exc.detail, (list, dict)):
-            data = exc.detail
+        if isinstance(exc, errors.BaseError):
+            data = dict(code=exc.code,
+                        msg=exc.msg,
+                        details=exc.details if exc.details
+                        else traceback.format_exc())
+            if not settings.DEBUG:
+                del  data['details']
         else:
-            data = {'details': exc.detail}
+            if isinstance(exc.detail, (list, dict)):
+                data = exc.detail
+            else:
+                data = {'details': exc.detail}
 
         set_rollback()
         return Response(data, status=exc.status_code, headers=headers)
