@@ -218,7 +218,25 @@ class PreProcessor:
 
 
 
-def pre_request(pre_processor=PreProcessor()):
+class AfterProcessor:
+    """
+    Process response, for example response fields should match serializer.
+    """
+
+    def check_serializer(self, serializer):
+        try:
+            serializer.is_valid(raise_exception=True)
+        except exceptions.ValidationError as e:
+            raise errors.DataInValidError(msg=e.detail)
+
+
+    def process(self, serializer, data):
+        self.check_serializer(serializer)
+
+
+
+def request_wrapper(pre_processor=PreProcessor(),
+                    after_processor=AfterProcessor()):
     def decorator(func):
         """
         Decorate a view method, pre-process params of a request
@@ -230,7 +248,7 @@ def pre_request(pre_processor=PreProcessor()):
             view = args[0]
             request = args[1]
 
-            if not isinstance(view, APIView):
+            if not isinstance(view, LoggedAPIView):
                 raise TypeError
 
             if not isinstance(request, Request):
@@ -242,7 +260,16 @@ def pre_request(pre_processor=PreProcessor()):
             response = pre_processor.process(valid_data)
             if response:
                 return response
+
+            response = func(*args, **kwargs, valid_data=valid_data)
+            if response.data:
+                response_data = response.data
             else:
-                return func(*args, **kwargs, valid_data=valid_data)
+                response_data = dict()
+
+            serializer = view.get_serializer(data=response_data)
+            after_processor.process(serializer, response_data)
+
+            return response
         return wrapper
     return decorator

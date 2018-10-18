@@ -227,6 +227,16 @@ class DataExceededError(DataError):
 
 
 
+class DataInValidError(DataError):
+    """
+    For example, server return data does not match api doc.
+    """
+    status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+    code = 124
+    msg = 'Data invalid.'
+
+
+
 ################################################################################
 class AccountError(BaseError):
     """
