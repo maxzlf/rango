@@ -1,22 +1,34 @@
 import json
 import logging
 from uuid import uuid1
+from functools import wraps
 from django.http import Http404
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
 from rest_framework import exceptions
+from rest_framework import serializers
+from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView, set_rollback
 from rest_framework.utils.encoders import JSONEncoder
 from .utils.ipware import get_ip
+from .permissions import DenyAny
 from . import errors
 import traceback
 
 
 
+class APISerializer(serializers.Serializer):
+    validate_only = serializers.BooleanField(required=False)
+
+
+
 class LoggedAPIView(APIView):
     api_logger = logging.getLogger('API')
+    authentication_classes = ()
+    permission_classes = (DenyAny, )
+    serializer_classes = None
 
 
     def __init__(self, *args, **kwargs):
@@ -33,12 +45,39 @@ class LoggedAPIView(APIView):
         self._log_request(request)
         super().initial(request, *args, **kwargs)
         self._log_authentication(request)
+        request.validated_data = self.get_validated_data(request)
 
 
     def finalize_response(self, request, response, *args, **kwargs):
         response = super().finalize_response(request, response, *args, **kwargs)
         self._log_response(response)
         return response
+
+
+    @property
+    def default_serializer_class(self):
+        return APISerializer
+
+
+    def get_serializer_class(self):
+        serializer_class = getattr(self, 'serializer_class', None)
+        if serializer_class:
+            return serializer_class
+
+        method = self.request.method
+        if not self.serializer_classes or method not in self.serializer_classes:
+            return self.default_serializer_class
+
+        serializer_class = self.serializer_classes[method]
+        assert issubclass(serializer_class, self.default_serializer_class)
+        return serializer_class
+
+
+    def get_validated_data(self, request):
+        data = request.GET if request.method == 'GET' else request.data
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        return serializer.validated_data
 
 
     def _log_raw_request(self, request):
@@ -147,3 +186,63 @@ def exception_handler(exc, context):
         return Response(data, status=exc.status_code, headers=headers)
 
     return None
+
+
+
+class PreProcessor:
+    """
+    Re-process request params, sometimes request can be handled at first time,
+    for example, if 'validate_only' field is True in params, then we should just
+    validate the params of the request, and return validate result, has no side
+    effect on server.
+    """
+
+
+    def validate_only(self, valid_data):
+        """
+        Process validate_only field.
+        Can be overwrite by subclass
+        """
+        validate_only = valid_data.get('validate_only', False)
+        if validate_only:
+            return Response(dict(result='OK'))
+        return None
+
+
+    def process(self, valid_data):
+        response = self.validate_only(valid_data)
+        if response:
+            return response
+
+        return None
+
+
+
+def pre_request(pre_processor=PreProcessor()):
+    def decorator(func):
+        """
+        Decorate a view method, pre-process params of a request
+        :param func:
+        :return:
+        """
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            view = args[0]
+            request = args[1]
+
+            if not isinstance(view, APIView):
+                raise TypeError
+
+            if not isinstance(request, Request):
+                raise TypeError
+
+            valid_data = view.get_validated_data(request)
+
+            # pre-process
+            response = pre_processor.process(valid_data)
+            if response:
+                return response
+            else:
+                return func(*args, **kwargs, valid_data=valid_data)
+        return wrapper
+    return decorator
