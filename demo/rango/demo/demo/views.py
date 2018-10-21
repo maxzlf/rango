@@ -26,7 +26,6 @@ class ExampleView(DemoAPIView):
 
     @request_wrapper()
     def post(self, request, valid_data):
-        del valid_data['foo']
         return Response(valid_data)
 
 

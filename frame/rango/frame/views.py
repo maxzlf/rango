@@ -1,4 +1,5 @@
 import json
+import copy
 import logging
 from uuid import uuid1
 from functools import wraps
@@ -21,6 +22,9 @@ import traceback
 
 class APISerializer(serializers.Serializer):
     validate_only = serializers.BooleanField(required=False)
+    output_only = serializers.ListField(required=False,
+                                        allow_empty=True,
+                                        default=[])
 
 
 
@@ -209,12 +213,22 @@ class PreProcessor:
         return None
 
 
+    def output_only(self, valid_data):
+        valid_data_copy = copy.deepcopy(valid_data)
+        output_only_fields = valid_data.get('output_only', [])
+        for field in valid_data.keys():
+            if field in output_only_fields:
+                del valid_data_copy[field]
+        del valid_data_copy['output_only']
+        return valid_data_copy
+
+
     def process(self, valid_data):
         response = self.validate_only(valid_data)
         if response:
             return response
 
-        return None
+        return self.output_only(valid_data)
 
 
 
@@ -257,9 +271,11 @@ def request_wrapper(pre_processor=PreProcessor(),
             valid_data = view.get_validated_data(request)
 
             # pre-process
-            response = pre_processor.process(valid_data)
-            if response:
-                return response
+            result = pre_processor.process(valid_data)
+            if isinstance(request, Response):
+                return result
+            if isinstance(result, dict) or isinstance(result, list):
+                valid_data = result
 
             response = func(*args, **kwargs, valid_data=valid_data)
             if response.data:
