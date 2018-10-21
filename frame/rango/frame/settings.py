@@ -190,6 +190,8 @@ class MSASettings:
         self.settings['REST_FRAMEWORK'] = {
             'DEFAULT_PERMISSION_CLASSES': ('rango.frame.permissions.DenyAny',),
             'DEFAULT_AUTHENTICATION_CLASSES': (),
+            'DEFAULT_PAGINATION_CLASS':
+                'rest_framework.pagination.LimitOffsetPagination',
             'EXCEPTION_HANDLER': 'rango.frame.views.exception_handler'}
 
 
