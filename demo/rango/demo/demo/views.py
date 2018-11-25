@@ -1,5 +1,4 @@
 import datetime
-from rest_framework.response import Response
 from rango.frame.views import request_wrapper
 from .student import Student
 from .common import DemoAPIView
@@ -15,7 +14,7 @@ class PingView(DemoAPIView):
     @request_wrapper()
     def get(self, request, valid_data):
         result = dict(time=datetime.datetime.now())
-        return Response(result)
+        return result
 
 
 
@@ -27,12 +26,12 @@ class ExampleView(DemoAPIView):
 
     @request_wrapper()
     def post(self, request, valid_data):
-        return Response(valid_data)
+        return dict(foo="aaaa", bar=0)
 
 
     @request_wrapper()
     def put(self, request, valid_data):
-        return Response(valid_data)
+        return valid_data
 
 
 
@@ -50,7 +49,7 @@ class StudentsView(DemoAPIView):
                       is_activated=student.is_activated,
                       create_time=student.create_time,
                       update_time=student.update_time)
-        return Response(result)
+        return result
 
 
 
@@ -67,4 +66,4 @@ class StudentView(DemoAPIView):
                       is_activated=student.is_activated,
                       create_time=student.create_time,
                       update_time=student.update_time)
-        return Response(result)
+        return result

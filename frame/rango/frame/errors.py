@@ -140,13 +140,13 @@ class TooFrequent(RestrictError):
 
 
 
-class Unaccessible(RestrictError):
+class Inaccessible(RestrictError):
     """
     Api is not accessible due to some unsatisfied conditions.
     """
     status_code = status.HTTP_403_FORBIDDEN
     code = 112
-    msg = 'Unaccessible.'
+    msg = 'Inaccessible.'
 
 
 
@@ -260,9 +260,9 @@ class TokenExpired(AccountError):
 
 
 
-class Kickout(AccountError):
+class KickOut(AccountError):
     code = 133
-    msg = 'Has been kickout.'
+    msg = 'Has been kicked out.'
 
 
 

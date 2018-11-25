@@ -22,9 +22,8 @@ import traceback
 
 class APISerializer(serializers.Serializer):
     validate_only = serializers.BooleanField(required=False)
-    output_only = serializers.ListField(required=False,
-                                        allow_empty=True,
-                                        default=[])
+    input_only = ()
+    output_only = ()
 
 
 
@@ -193,9 +192,9 @@ def exception_handler(exc, context):
 
 
 
-class PreProcessor:
+class RequestProcessor:
     """
-    Re-process request params, sometimes request can be handled at first time,
+    Pre-process request params, sometimes request can be handled at first time,
     for example, if 'validate_only' field is True in params, then we should just
     validate the params of the request, and return validate result, has no side
     effect on server.
@@ -213,44 +212,56 @@ class PreProcessor:
         return None
 
 
-    def output_only(self, valid_data):
+    def output_only(self, output_only_fields, valid_data):
         valid_data_copy = copy.deepcopy(valid_data)
-        output_only_fields = valid_data.get('output_only', [])
+        output_only_fields = output_only_fields if output_only_fields else ()
         for field in valid_data.keys():
             if field in output_only_fields:
                 del valid_data_copy[field]
-        del valid_data_copy['output_only']
         return valid_data_copy
 
 
-    def process(self, valid_data):
+    def process(self, view, request):
+        valid_data = view.get_validated_data(request)
         response = self.validate_only(valid_data)
         if response:
             return response
 
-        return self.output_only(valid_data)
+        output_only_fields = view.get_serializer_class().output_only
+        valid_data = self.output_only(output_only_fields, valid_data)
+
+        return valid_data
 
 
 
-class AfterProcessor:
+class ResponseProcessor:
     """
     Process response, for example response fields should match serializer.
     """
 
-    def check_serializer(self, serializer):
+    def check_response_data(self, view, response_data):
         try:
-            serializer.is_valid(raise_exception=True)
+            serializer = view.get_serializer_class()
+            _declared_fields = serializer._declared_fields
+            _declared_fields_copy = copy.deepcopy(_declared_fields)
+
+            for field in _declared_fields:
+                if field in serializer.input_only:
+                    del _declared_fields_copy[field]
+
+            serializer._declared_fields = _declared_fields_copy
+            serializer(data=response_data).is_valid(raise_exception=True)
+            return Response(response_data)
         except exceptions.ValidationError as e:
             raise errors.DataInValidError(msg=e.detail)
 
 
-    def process(self, serializer, data):
-        self.check_serializer(serializer)
+    def process(self, view, response_data):
+        return self.check_response_data(view, response_data)
 
 
 
-def request_wrapper(pre_processor=PreProcessor(),
-                    after_processor=AfterProcessor()):
+def request_wrapper():
     def decorator(func):
         """
         Decorate a view method, pre-process params of a request
@@ -271,21 +282,15 @@ def request_wrapper(pre_processor=PreProcessor(),
             valid_data = view.get_validated_data(request)
 
             # pre-process
-            result = pre_processor.process(valid_data)
-            if isinstance(request, Response):
+            result = RequestProcessor().process(view, request)
+            if isinstance(result, Response):
                 return result
             if isinstance(result, dict) or isinstance(result, list):
                 valid_data = result
 
-            response = func(*args, **kwargs, valid_data=valid_data)
-            if response.data:
-                response_data = response.data
-            else:
-                response_data = dict()
+            response_data = func(*args, **kwargs, valid_data=valid_data)
 
-            serializer = view.get_serializer(data=response_data)
-            after_processor.process(serializer, response_data)
-
+            response = ResponseProcessor().process(view, response_data)
             return response
         return wrapper
     return decorator

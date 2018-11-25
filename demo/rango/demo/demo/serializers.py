@@ -8,7 +8,8 @@ from .common import DemoAPISerializer
 class ExampleSerializer(DemoAPISerializer):
     foo = serializers.CharField(required=False)
     bar = serializers.IntegerField(min_value=0, max_value=100)
-    output_only = serializers.ListField(required=False, default=['foo'])
+    input_only = ("foo", )
+    output_only = ('bar', )
 
 
 
@@ -22,9 +23,7 @@ class StudentPostSerializer(DemoAPISerializer):
     is_activated = serializers.BooleanField(required=False, default=False)
     create_time = serializers.DateTimeField(required=False)
     update_time = serializers.DateTimeField(required=False)
-    output_only = serializers.ListField(required=False, default=['student_id',
-                                                                 'create_time',
-                                                                 'update_time'])
+    output_only = ('student_id', 'create_time', 'update_time')
 
 
 
@@ -38,10 +37,8 @@ class StudentGetSerializer(DemoAPISerializer):
     is_activated = serializers.BooleanField(required=False, default=False)
     create_time = serializers.DateTimeField(required=False)
     update_time = serializers.DateTimeField(required=False)
-    output_only = serializers.ListField(required=False,
-                                        default=['student_id', 'gender', 'name',
-                                                 'is_activated', 'create_time',
-                                                 'update_time'])
+    output_only = ('student_id', 'gender', 'name',
+                   'is_activated', 'create_time', 'update_time')
 
 
 
@@ -55,6 +52,4 @@ class StudentPutSerializer(DemoAPISerializer):
     is_activated = serializers.BooleanField(required=False, default=False)
     create_time = serializers.DateTimeField(required=False)
     update_time = serializers.DateTimeField(required=False)
-    output_only = serializers.ListField(required=False, default=['student_id',
-                                                                 'create_time',
-                                                                 'update_time'])
+    output_only = ('student_id', 'create_time', 'update_time')
