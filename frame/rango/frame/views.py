@@ -7,7 +7,6 @@ from django.http import Http404
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
 from rest_framework import exceptions
-from rest_framework import serializers
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
@@ -16,14 +15,8 @@ from rest_framework.utils.encoders import JSONEncoder
 from .utils.ipware import get_ip
 from .permissions import DenyAny
 from . import errors
+from .serializers import APISerializer
 import traceback
-
-
-
-class APISerializer(serializers.Serializer):
-    validate_only = serializers.BooleanField(required=False)
-    input_only = ()
-    output_only = ()
 
 
 
@@ -221,6 +214,22 @@ class RequestProcessor:
         return valid_data_copy
 
 
+    def list_options(self, valid_data):
+        options = ('offset', 'limit', 'order_by')
+        if all(o in valid_data for o in options):
+            offset = valid_data.pop('offset')
+            limit = valid_data.pop('limit')
+            order_by = valid_data.pop('order_by')
+            valid_data['options'] = dict(offset=offset, limit=limit,
+                                         order_by=order_by)
+        elif not any(o in valid_data for o in options):
+            pass
+        else:
+            assert False
+
+        return valid_data
+
+
     def process(self, view, request):
         valid_data = view.get_validated_data(request)
         response = self.validate_only(valid_data)
@@ -229,7 +238,7 @@ class RequestProcessor:
 
         output_only_fields = view.get_serializer_class().output_only
         valid_data = self.output_only(output_only_fields, valid_data)
-
+        valid_data = self.list_options(valid_data)
         return valid_data
 
 
@@ -261,36 +270,32 @@ class ResponseProcessor:
 
 
 
-def request_wrapper():
-    def decorator(func):
-        """
-        Decorate a view method, pre-process params of a request
-        :param func:
-        :return:
-        """
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            view = args[0]
-            request = args[1]
+def request_wrapper(func):
+    """
+    Decorate a view method, pre-process params of a request
+    :param func:
+    :return:
+    """
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        view = args[0]
+        request = args[1]
 
-            if not isinstance(view, LoggedAPIView):
-                raise TypeError
+        if not isinstance(view, LoggedAPIView):
+            raise TypeError
 
-            if not isinstance(request, Request):
-                raise TypeError
+        if not isinstance(request, Request):
+            raise TypeError
 
-            valid_data = view.get_validated_data(request)
+        # pre-process
+        result = RequestProcessor().process(view, request)
+        if isinstance(result, Response):
+            return result
+        valid_data = result
 
-            # pre-process
-            result = RequestProcessor().process(view, request)
-            if isinstance(result, Response):
-                return result
-            if isinstance(result, dict) or isinstance(result, list):
-                valid_data = result
+        response_data = func(*args, **kwargs, valid_data=valid_data)
 
-            response_data = func(*args, **kwargs, valid_data=valid_data)
+        response = ResponseProcessor().process(view, response_data)
+        return response
 
-            response = ResponseProcessor().process(view, response_data)
-            return response
-        return wrapper
-    return decorator
+    return wrapper

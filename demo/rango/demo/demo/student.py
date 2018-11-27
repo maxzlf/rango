@@ -1,5 +1,6 @@
 from rango.frame import errors
 from .models import Student as StudentM
+from . import common
 
 
 
@@ -34,5 +35,11 @@ class Student:
         self.get(student_id).delete()
 
 
-    def list(self):
-        return StudentM.objects.all()
+    def list(self, filters=None, options=None):
+        query_set = StudentM.objects.all()
+        if filters:
+            params = {k: v for k, v in filters.items() if v is not None}
+            query_set = set.filter(**params)
+        total = len(query_set)
+        query_set = common.order_and_pagination(query_set, options)
+        return total, query_set

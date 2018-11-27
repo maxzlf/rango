@@ -1,51 +1,31 @@
-from django.forms import Field, BooleanField, NullBooleanField, CharField
-from django.forms import IntegerField, FloatField, DecimalField
-from django.forms import DateField, TimeField, DateTimeField
-from django.forms import DurationField, RegexField, EmailField, FileField
-from django.forms import ImageField, URLField, ChoiceField, TypedChoiceField
-from django.forms import MultipleChoiceField, TypedMultipleChoiceField
-from django.forms import ComboField, MultiValueField, FileField
-from django.forms import SplitDateTimeField, GenericIPAddressField, SlugField
-from django.forms import UUIDField
+from rest_framework import serializers
+from . import errors
 
 
 
-class FieldEx(Field):
-    IGNORED_FIELD = 'IGNORED_FIELD'
+class APISerializer(serializers.Serializer):
+    validate_only = serializers.BooleanField(required=False)
+    input_only = ()
+    output_only = ()
 
 
 
-    def __init__(self, output_only=False, **kwargs):
-        super().__init__(**kwargs)
-        self.output_only = output_only
+class ListSerializer(APISerializer):
+    offset = serializers.IntegerField(required=False, min_value=0, default=0)
+    limit = serializers.IntegerField(required=False, min_value=0, max_value=50,
+                                     default=20)
+    order_by = serializers.CharField(required=False, allow_null=False,
+                                     default="")
+    order_by_fields = ()
 
 
-    def clean(self, value):
-        value = super().clean(value)
-        if self.output_only is True:
-            value = self.IGNORED_FIELD
-        return value
+    def validate_order_by(self, data):
+        rules = data.split(',')
+        rules = [i.strip() for i in rules]
+        rules = [i for i in rules if i]
+        fields = [i[1:] if '-' == i[0] else i for i in rules]
 
-
-
-class BooleanFieldEx(FieldEx, BooleanField):
-
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
-
-    def clean(self, value):
-        print("==========")
-        print(value)
-        return super().clean(value)
-
-
-    def to_python(self, value):
-        print("==========")
-        return super().to_python(value)
-
-
-    def validate(self, value):
-        print("==========")
-        return super().validate(value)
+        if any(f not in self.order_by_fields for f in fields):
+            raise errors.ParamError(msg="Unsupported order by fields, {}"
+                                    .format(rules))
+        return rules
