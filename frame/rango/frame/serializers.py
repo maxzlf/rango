@@ -5,8 +5,17 @@ from . import errors
 
 class APISerializer(serializers.Serializer):
     validate_only = serializers.BooleanField(required=False)
+    field_mask = serializers.CharField(required=False, allow_null=False,
+                                     default="")
     input_only = ()
     output_only = ()
+
+
+    def validate_field_mask(self, data):
+        fields = data.split(',')
+        fields = [i.strip() for i in fields]
+        fields = [i for i in fields if i]
+        return fields
 
 
 

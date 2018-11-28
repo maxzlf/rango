@@ -199,7 +199,7 @@ class RequestProcessor:
         Process validate_only field.
         Can be overwrite by subclass
         """
-        validate_only = valid_data.get('validate_only', False)
+        validate_only = valid_data.pop('validate_only', False)
         if validate_only:
             return Response(dict(result='OK'))
         return None
@@ -212,6 +212,11 @@ class RequestProcessor:
             if field in output_only_fields:
                 del valid_data_copy[field]
         return valid_data_copy
+
+
+    def field_mask(self, valid_data):
+        valid_data.pop('field_mask', None)
+        return valid_data
 
 
     def list_options(self, valid_data):
@@ -239,6 +244,7 @@ class RequestProcessor:
         output_only_fields = view.get_serializer_class().output_only
         valid_data = self.output_only(output_only_fields, valid_data)
         valid_data = self.list_options(valid_data)
+        valid_data = self.field_mask(valid_data)
         return valid_data
 
 
@@ -248,9 +254,8 @@ class ResponseProcessor:
     Process response, for example response fields should match serializer.
     """
 
-    def check_response_data(self, view, response_data):
+    def check_response_data(self, serializer, response_data):
         try:
-            serializer = view.get_serializer_class()
             _declared_fields = serializer._declared_fields
             _declared_fields_copy = copy.deepcopy(_declared_fields)
 
@@ -260,13 +265,31 @@ class ResponseProcessor:
 
             serializer._declared_fields = _declared_fields_copy
             serializer(data=response_data).is_valid(raise_exception=True)
-            return Response(response_data)
+            return response_data
         except exceptions.ValidationError as e:
             raise errors.DataInValidError(msg=e.detail)
 
 
-    def process(self, view, response_data):
-        return self.check_response_data(view, response_data)
+    def field_mask(self, validate_data, response_data):
+        field_mask = validate_data.get('field_mask', None)
+        print(field_mask)
+        if not field_mask:
+            return response_data
+
+        response_data_copy = copy.deepcopy(response_data)
+        for k in response_data:
+            if k not in field_mask:
+                del response_data_copy[k]
+        return response_data_copy
+
+
+    def process(self, view, request, response_data):
+        serializer = view.get_serializer_class()
+        response_data = self.check_response_data(serializer, response_data)
+
+        validate_data = view.get_validated_data(request)
+        response_data = self.field_mask(validate_data, response_data)
+        return response_data
 
 
 
@@ -294,8 +317,9 @@ def request_wrapper(func):
         valid_data = result
 
         response_data = func(*args, **kwargs, valid_data=valid_data)
+        response_data = ResponseProcessor()\
+            .process(view, request, response_data)
 
-        response = ResponseProcessor().process(view, response_data)
-        return response
+        return Response(response_data)
 
     return wrapper
