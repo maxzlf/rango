@@ -4,7 +4,6 @@ import logging
 from uuid import uuid1
 from functools import wraps
 from django.http import Http404
-from django.conf import settings
 from django.core.exceptions import PermissionDenied
 from rest_framework import exceptions
 from rest_framework.request import Request
@@ -15,6 +14,8 @@ from rest_framework.utils.encoders import JSONEncoder
 from .utils.ipware import get_ip
 from .permissions import DenyAny
 from . import errors
+from . import consts
+from .contrib import constant
 from .serializers import APISerializer
 import traceback
 
@@ -140,6 +141,13 @@ class StaticView(LoggedAPIView):
         return Response(self.content)
 
 
+def is_debug_mode():
+    try:
+        debug_mode = constant.Constant().get(consts.ConstKey().debug_mode)
+        return debug_mode == 'True'
+    except errors.DataNotFoundError:
+        return False
+
 
 def exception_handler(exc, context):
     """
@@ -170,7 +178,7 @@ def exception_handler(exc, context):
                         msg=exc.msg,
                         details=exc.details if exc.details
                         else traceback.format_exc())
-            if not settings.DEBUG:
+            if not is_debug_mode():
                 del data['details']
         else:
             if isinstance(exc.detail, (list, dict)):

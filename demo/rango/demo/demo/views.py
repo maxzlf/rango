@@ -1,5 +1,6 @@
 import datetime
 from rango.frame.views import request_wrapper
+from rango.frame.contrib import constant
 from .student import Student
 from .common import DemoAPIView
 from .permissions import AllowAny
@@ -32,6 +33,58 @@ class ExampleView(DemoAPIView):
     @request_wrapper
     def put(self, request, valid_data):
         return valid_data
+
+
+
+class ConstantsView(DemoAPIView):
+    permission_classes = (AllowAny,)
+    serializer_classes = {'POST': serializers.ConstantsPostSerializer}
+
+
+    @request_wrapper
+    def post(self, request, valid_data):
+        const = constant.Constant().add(**valid_data)
+        result = dict(key=const.key, value=const.value,
+                      description=const.description)
+        return result
+
+
+    @request_wrapper
+    def get(self, request, valid_data):
+        total, consts = constant.Constant().list()
+        result = dict(total=total, entries=[])
+        for const in consts:
+            result['entries'].append(dict(key=const.key,
+                                          value=const.value,
+                                          description=const.description))
+        return result
+
+
+
+class ConstantView(DemoAPIView):
+    permission_classes = (AllowAny,)
+    serializer_classes = {'PUT': serializers.ConstantPutSerializer}
+
+
+    @request_wrapper
+    def get(self, request, key, valid_data=None):
+        value = constant.Constant().get(key)
+        result = dict(key=key, value=value)
+        return result
+
+
+    @request_wrapper
+    def put(self, request, key, valid_data=None):
+        const = constant.Constant().update(key, **valid_data)
+        result = dict(key=const.key, value=const.value,
+                      description=const.description)
+        return result
+
+
+    @request_wrapper
+    def delete(self, request, key, valid_data=None):
+        constant.Constant().delete(key)
+        return dict()
 
 
 
@@ -70,7 +123,6 @@ class StudentsView(DemoAPIView):
 
 class StudentView(DemoAPIView):
     permission_classes = (AllowAny,)
-    serializer_classes = {'GET': serializers.StudentGetSerializer}
 
 
     @request_wrapper

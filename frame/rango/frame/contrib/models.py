@@ -84,3 +84,15 @@ class SToken(models.Model):
     def delete(self, using=None, keep_parents=False):
         move2trash(self)
         super().delete(using, keep_parents)
+
+
+
+class YConstant(models.Model):
+    class Meta:
+        verbose_name = 'Constant'
+        verbose_name_plural = 'Constants'
+
+
+    key = models.CharField(primary_key=True, max_length=64)
+    value = models.TextField()
+    description = models.CharField(max_length=256, blank=True)

@@ -1,6 +1,5 @@
 from django.contrib import admin
-
-from .models import User, SToken, Trash
+from .models import User, SToken, Trash,YConstant
 
 
 
@@ -30,3 +29,12 @@ class TrashAdmin(admin.ModelAdmin):
 
 
 admin.site.register(Trash, TrashAdmin)
+
+
+
+class ConstantAdmin(admin.ModelAdmin):
+    list_display = ('key', 'value', 'description')
+    ordering = ('key',)
+
+
+admin.site.register(YConstant, ConstantAdmin)

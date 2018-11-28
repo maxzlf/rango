@@ -3,7 +3,7 @@ import os
 
 
 MSA_CONFIG_DEFAULT = {
-    'DEBUG': True,
+    'DEBUG': False,
     'MSA_DATA_DIR': None,
     'STATIC_URL': '/django-static/',
     'MSA_STATIC_ROOT': 'django-static/',

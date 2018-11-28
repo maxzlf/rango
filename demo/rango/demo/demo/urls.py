@@ -6,6 +6,9 @@ urlpatterns = [
     re_path('^v1.0/ping$', views.PingView.as_view()),
     re_path('^v1.0/example$', views.ExampleView.as_view()),
     re_path('^v1.0/students$', views.StudentsView.as_view()),
-    re_path('^v1.0/students/(?P<student_id>[0-9a-z-]+)$',
+    re_path('^v1.0/students/(?P<student_id>[0-9a-zA-Z-_]+)$',
             views.StudentView.as_view()),
+    re_path('^v1.0/constants$', views.ConstantsView.as_view()),
+    re_path('^v1.0/constants/(?P<key>[0-9a-zA-Z-_]+)$',
+            views.ConstantView.as_view()),
 ]
