@@ -254,6 +254,28 @@ class ResponseProcessor:
     Process response, for example response fields should match serializer.
     """
 
+
+    def _mask_fields(self, field_mask, data, level=0):
+        if isinstance(data, dict):
+            data_copy = copy.deepcopy(data)
+            for k in data:
+                result = self._mask_fields(field_mask, data[k], level + 1)
+                data_copy[k] = result
+
+                field = k if level == 0 else str(level) + k
+                if field in field_mask:
+                    del data_copy[k]
+            return data_copy
+        elif isinstance(data, list):
+            data_copy = []
+            for i in data:
+                result = self._mask_fields(field_mask, i, level + 1)
+                data_copy.append(result)
+            return data_copy
+        else:
+            return data
+
+
     def check_response_data(self, serializer, response_data):
         try:
             _declared_fields = serializer._declared_fields
@@ -272,15 +294,11 @@ class ResponseProcessor:
 
     def field_mask(self, validate_data, response_data):
         field_mask = validate_data.get('field_mask', None)
-        print(field_mask)
         if not field_mask:
             return response_data
 
-        response_data_copy = copy.deepcopy(response_data)
-        for k in response_data:
-            if k not in field_mask:
-                del response_data_copy[k]
-        return response_data_copy
+        response_data = self._mask_fields(field_mask, response_data)
+        return response_data
 
 
     def process(self, view, request, response_data):
