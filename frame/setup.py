@@ -11,4 +11,4 @@ setup(name='rango-frame',
       url='http://www.yunjingit.com/',
       long_description='',
       platforms=['Any', ],
-      install_requires=('django', 'djangorestframework'))
+      install_requires=('django==2.1.2', 'djangorestframework==3.8.2'))
