@@ -15,6 +15,16 @@ class PingView(DemoAPIView):
     @request_wrapper
     def get(self, request, valid_data):
         result = dict(time=datetime.datetime.now())
+        from django.contrib.auth.hashers import check_password
+        from django.contrib.auth.hashers import make_password
+        from django.contrib.auth.hashers import is_password_usable
+        password = "plain_text"
+        print(is_password_usable(password))
+        hashed_password = make_password(password)
+        print("Hashed password is:", hashed_password)
+        print(check_password(password, hashed_password))
+        print(check_password("plain_text ", hashed_password))
+
         return result
 
 

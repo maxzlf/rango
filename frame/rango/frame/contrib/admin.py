@@ -4,8 +4,8 @@ from .models import User, SToken, Trash,YConstant
 
 
 class UserAdmin(admin.ModelAdmin):
-    list_display = ('id', 'uid', 'is_activated',
-                    'name', 'create_time', 'update_time')
+    list_display = ('user_id', 'is_activated',
+                    'account', 'create_time', 'update_time')
     ordering = ('-update_time',)
 
 

@@ -32,8 +32,9 @@ class Trash(models.Model):
 
 
 class User(models.Model):
-    uid = models.UUIDField(default=uuid.uuid4, unique=True)
-    name = models.CharField(max_length=64, blank=True)
+    user_id = models.UUIDField(primary_key=True, default=uuid.uuid4)
+    account = models.CharField(max_length=64, unique=True, db_index=True)
+    password = models.CharField(max_length=128)
     is_activated = models.BooleanField(default=False)
     create_time = models.DateTimeField(auto_now_add=True)
     update_time = models.DateTimeField(auto_now=True)
@@ -59,9 +60,11 @@ class SToken(models.Model):
     The default authorization token model.
     """
     token = models.UUIDField(primary_key=True, default=uuid.uuid4, unique=True)
+    key = models.UUIDField(default=uuid.uuid4)
     user = models.ForeignKey(User, related_name='auth_token',
                              on_delete=models.CASCADE)
     host = models.CharField(max_length=128, null=False, blank=True, default='*')
+    expiry_time = models.DateTimeField()
     create_time = models.DateTimeField(auto_now_add=True)
 
 

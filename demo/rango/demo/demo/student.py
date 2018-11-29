@@ -1,6 +1,6 @@
 from rango.frame import errors
+from rango.frame.utils import pagination
 from .models import Student as StudentM
-from . import common
 
 
 
@@ -41,5 +41,5 @@ class Student:
             params = {k: v for k, v in filters.items() if v is not None}
             query_set = set.filter(**params)
         total = len(query_set)
-        query_set = common.order_and_pagination(query_set, options)
+        query_set = pagination.order_and_pagination(query_set, options)
         return total, query_set
