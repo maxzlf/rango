@@ -1,5 +1,4 @@
 import json
-import copy
 import logging
 from uuid import uuid1
 from functools import wraps
@@ -17,6 +16,7 @@ from . import errors
 from . import consts
 from .contrib import constant
 from .serializers import APISerializer
+from .processor import RequestProcessor, ResponseProcessor
 import traceback
 
 
@@ -160,9 +160,9 @@ def exception_handler(exc, context):
     to be raised.
     """
     if isinstance(exc, Http404):
-        exc = exceptions.NotFound()
+        exc = errors.DataNotFoundError()
     elif isinstance(exc, PermissionDenied):
-        exc = exceptions.PermissionDenied()
+        exc = errors.PermissionDenied()
 
     if isinstance(exc, exceptions.APIException):
         headers = {}
@@ -193,132 +193,6 @@ def exception_handler(exc, context):
 
 
 
-class RequestProcessor:
-    """
-    Pre-process request params, sometimes request can be handled at first time,
-    for example, if 'validate_only' field is True in params, then we should just
-    validate the params of the request, and return validate result, has no side
-    effect on server.
-    """
-
-
-    def validate_only(self, valid_data):
-        """
-        Process validate_only field.
-        Can be overwrite by subclass
-        """
-        validate_only = valid_data.pop('validate_only', False)
-        if validate_only:
-            return Response(dict(result='OK'))
-        return None
-
-
-    def output_only(self, output_only_fields, valid_data):
-        valid_data_copy = copy.deepcopy(valid_data)
-        output_only_fields = output_only_fields if output_only_fields else ()
-        for field in valid_data.keys():
-            if field in output_only_fields:
-                del valid_data_copy[field]
-        return valid_data_copy
-
-
-    def field_mask(self, valid_data):
-        valid_data.pop('field_mask', None)
-        return valid_data
-
-
-    def list_options(self, valid_data):
-        options = ('offset', 'limit', 'order_by')
-        if all(o in valid_data for o in options):
-            offset = valid_data.pop('offset')
-            limit = valid_data.pop('limit')
-            order_by = valid_data.pop('order_by')
-            valid_data['options'] = dict(offset=offset, limit=limit,
-                                         order_by=order_by)
-        elif not any(o in valid_data for o in options):
-            pass
-        else:
-            assert False
-
-        return valid_data
-
-
-    def process(self, view, request):
-        valid_data = view.get_validated_data(request)
-        response = self.validate_only(valid_data)
-        if response:
-            return response
-
-        output_only_fields = view.get_serializer_class().output_only
-        valid_data = self.output_only(output_only_fields, valid_data)
-        valid_data = self.list_options(valid_data)
-        valid_data = self.field_mask(valid_data)
-        return valid_data
-
-
-
-class ResponseProcessor:
-    """
-    Process response, for example response fields should match serializer.
-    """
-
-
-    def _mask_fields(self, field_mask, data, level=0):
-        if isinstance(data, dict):
-            data_copy = copy.deepcopy(data)
-            for k in data:
-                result = self._mask_fields(field_mask, data[k], level + 1)
-                data_copy[k] = result
-
-                field = k if level == 0 else str(level) + k
-                if field in field_mask:
-                    del data_copy[k]
-            return data_copy
-        elif isinstance(data, list):
-            data_copy = []
-            for i in data:
-                result = self._mask_fields(field_mask, i, level + 1)
-                data_copy.append(result)
-            return data_copy
-        else:
-            return data
-
-
-    def check_response_data(self, serializer, response_data):
-        try:
-            _declared_fields = serializer._declared_fields
-            _declared_fields_copy = copy.deepcopy(_declared_fields)
-
-            for field in _declared_fields:
-                if field in serializer.input_only:
-                    del _declared_fields_copy[field]
-
-            serializer._declared_fields = _declared_fields_copy
-            serializer(data=response_data).is_valid(raise_exception=True)
-            return response_data
-        except exceptions.ValidationError as e:
-            raise errors.DataInValidError(msg=e.detail)
-
-
-    def field_mask(self, validate_data, response_data):
-        field_mask = validate_data.get('field_mask', None)
-        if not field_mask:
-            return response_data
-
-        response_data = self._mask_fields(field_mask, response_data)
-        return response_data
-
-
-    def process(self, view, request, response_data):
-        serializer = view.get_serializer_class()
-        response_data = self.check_response_data(serializer, response_data)
-
-        validate_data = view.get_validated_data(request)
-        response_data = self.field_mask(validate_data, response_data)
-        return response_data
-
-
-
 def request_wrapper(func):
     """
     Decorate a view method, pre-process params of a request
@@ -330,22 +204,13 @@ def request_wrapper(func):
         view = args[0]
         request = args[1]
 
-        if not isinstance(view, LoggedAPIView):
-            raise TypeError
+        assert isinstance(view, LoggedAPIView)
+        assert isinstance(request, Request)
 
-        if not isinstance(request, Request):
-            raise TypeError
-
-        # pre-process
-        result = RequestProcessor().process(view, request)
-        if isinstance(result, Response):
-            return result
-        valid_data = result
-
-        response_data = func(*args, **kwargs, valid_data=valid_data)
-        response_data = ResponseProcessor()\
-            .process(view, request, response_data)
-
-        return Response(response_data)
+        valid_data = view.get_validated_data(request)
+        valid_data = RequestProcessor(view, request, valid_data).process()
+        res_data = func(*args, **kwargs, valid_data=valid_data)
+        res_data = ResponseProcessor(view, request, res_data).process()
+        return Response(res_data)
 
     return wrapper

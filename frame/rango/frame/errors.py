@@ -16,6 +16,17 @@ class BaseError(APIException):
 
 
 
+class Success(BaseError):
+    """
+    Base class of server error
+    """
+    status_code = status.HTTP_200_OK
+    code = 0
+    msg = 'Ok'
+    details = 'Ok'
+
+
+
 ################################################################################
 class ServerError(BaseError):
     """
