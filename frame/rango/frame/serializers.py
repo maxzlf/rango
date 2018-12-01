@@ -4,6 +4,7 @@ from . import errors
 
 
 class APISerializer(serializers.Serializer):
+    request_time = serializers.DateTimeField(required=False)
     validate_only = serializers.BooleanField(required=False)
     field_mask = serializers.CharField(required=False, allow_null=False,
                                        default="")

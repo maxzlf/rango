@@ -25,6 +25,8 @@ class PingView(DemoAPIView):
         print(check_password(password, hashed_password))
         print(check_password("plain_text ", hashed_password))
 
+        print(datetime.datetime.now())
+
         return result
 
 
@@ -118,7 +120,8 @@ class StudentsView(DemoAPIView):
 
     @request_wrapper
     def get(self, request, valid_data):
-        total, students = Student().list(options=valid_data.get('options', None))
+        options = valid_data.get('options', None)
+        total, students = Student().list(options=options)
         result = dict(total=total, entries=[])
         for student in students:
             result['entries'].append(dict(student_id=student.student_id,

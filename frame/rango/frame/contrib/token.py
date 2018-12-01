@@ -8,7 +8,7 @@ class Token:
 
     def get(self, token):
         try:
-            return SToken.objects.get(token)
+            return SToken.objects.get(token=token)
         except SToken.DoesNotExist:
             msg = 'Token {} not found.'.format(token)
             raise errors.DataNotFoundError(msg)

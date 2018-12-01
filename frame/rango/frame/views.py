@@ -1,36 +1,40 @@
 import json
 import logging
-from uuid import uuid1
+import traceback
+from uuid import uuid4
 from functools import wraps
-from django.http import Http404
-from django.core.exceptions import PermissionDenied
-from rest_framework import exceptions
 from rest_framework.request import Request
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny
+from rest_framework.exceptions import ValidationError
 from rest_framework.views import APIView, set_rollback
 from rest_framework.utils.encoders import JSONEncoder
-from .utils.ipware import get_ip
-from .permissions import DenyAny
+
 from . import errors
 from . import consts
-from .contrib import constant
+from .contrib import constant, token
+from .utils.ipware import get_ip
 from .serializers import APISerializer
-from .processor import RequestProcessor, ResponseProcessor
-import traceback
+from .permissions import AllowAny, DenyAny
+from .processor import RequestProcessor, RequestPermProcessor, ResponseProcessor
 
 
 
 class LoggedAPIView(APIView):
     api_logger = logging.getLogger('API')
     authentication_classes = ()
-    permission_classes = (DenyAny, )
+    permission_classes = (AllowAny, )
+    post_permission_classes = (DenyAny, )
+    put_permission_classes = (DenyAny, )
+    get_permission_classes = (DenyAny, )
+    delete_permission_classes = (DenyAny, )
     serializer_classes = None
+    constant_instance = constant.Constant()
+    token_instance = token.Token()
 
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._log_id = str(uuid1())
+        self._log_id = str(uuid4())
 
 
     def initialize_request(self, request, *args, **kwargs):
@@ -156,41 +160,24 @@ def exception_handler(exc, context):
     By default we handle the REST framework `APIException`, and also
     Django's built-in `Http404` and `PermissionDenied` exceptions.
 
-    Any unhandled exceptions may return `None`, which will cause a 500 error
-    to be raised.
+    Any unhandled exceptions may return `unknown error`,
+    which will cause a 500 error to be raised.
     """
-    if isinstance(exc, Http404):
-        exc = errors.DataNotFoundError()
-    elif isinstance(exc, PermissionDenied):
-        exc = errors.PermissionDenied()
-
-    if isinstance(exc, exceptions.APIException):
-        headers = {}
-        auth_header = getattr(exc, 'auth_header', None)
-        if auth_header:
-            headers['WWW-Authenticate'] = auth_header
-        wait = getattr(exc, 'wait', None)
-        if wait:
-            headers['Retry-After'] = '%d' % wait
-
+    try:
         if isinstance(exc, errors.BaseError):
-            data = dict(code=exc.code,
-                        msg=exc.msg,
-                        details=exc.details if exc.details
-                        else traceback.format_exc())
-            if not is_debug_mode():
-                del data['details']
+            raise exc
+        elif isinstance(exc, ValidationError):
+            raise errors.ParamError(details=exc.detail)
         else:
-            if isinstance(exc.detail, (list, dict)):
-                data = exc.detail
-            else:
-                data = {'details': exc.detail}
-
+            raise errors.ServerUnknownError
+    except errors.BaseError as e:
+        data = dict(code=e.code,
+                    msg=e.msg,
+                    details=e.details if e.details else traceback.format_exc())
+        if not is_debug_mode():
+            del data['details']
         set_rollback()
-        return Response(data, status=exc.status_code, headers=headers)
-
-    return None
-
+        return Response(data, status=e.status_code)
 
 
 def request_wrapper(func):
@@ -209,6 +196,7 @@ def request_wrapper(func):
 
         valid_data = view.get_validated_data(request)
         valid_data = RequestProcessor(view, request, valid_data).process()
+        valid_data = RequestPermProcessor(view, request, valid_data).process()
         res_data = func(*args, **kwargs, valid_data=valid_data)
         res_data = ResponseProcessor(view, request, res_data).process()
         return Response(res_data)

@@ -53,5 +53,16 @@ class ConstKey(YJEnum):
 
 
     @property
+    def replay_tolerance(self):
+        return "REPLAY_TOLERANCE"
+
+
+    @property
     def tuple(self):
-        return self.token, self.activated, self.debug_mode
+        return self.token, self.activated, self.debug_mode, \
+               self.replay_tolerance
+
+
+    def default_value(self, key):
+        default = dict(ACTIVATED=False, DEBUG_MODE=False, REPLAY_TOLERANCE=30)
+        return default.get(key, None)

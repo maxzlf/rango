@@ -15,6 +15,11 @@ class BaseError(APIException):
         self.details = details if details else self.details
 
 
+    def __str__(self):
+        return dict(status_code=self.status_code, code=self.code,
+                    msg=self.msg, details=self.details)
+
+
 
 class Success(BaseError):
     """
@@ -197,6 +202,17 @@ class MethodNotAllowed(RestrictError):
     status_code = status.HTTP_405_METHOD_NOT_ALLOWED
     code = 117
     msg = 'Method not allowed.'
+
+
+
+class ReplayAttackSuspected(RestrictError):
+    """
+    For example, some api only accept GET method, POST or PUT or DELETE are not
+    allowed.
+    """
+    status_code = status.HTTP_403_FORBIDDEN
+    code = 118
+    msg = 'Replay attack suspected.'
 
 
 

@@ -1,6 +1,8 @@
 import copy
+import datetime
 from rest_framework import exceptions
 from . import errors
+from . import consts
 
 
 
@@ -181,4 +183,88 @@ class ResponseProcessor(Processor):
 
         data = ResponseCheckProcessor(view, request, data).process()
         data = ResponseMaskFieldsProcessor(view, request, data).process()
+        return data
+
+
+
+class RequestAuthProcessor(Processor):
+    """
+    Check request authentication.
+    """
+
+
+    def _get_auth_fields(self, data):
+        token = self.request.META.get('HTTP_TOKEN', None)
+        signature = self.request.META.get('HTTP_SIGNATURE', None)
+        request_time = data.pop('request_time', None)
+
+        if token and signature and request_time:
+            return token, signature, request_time
+        else:
+            return None
+
+
+    def _check_time(self, request_time):
+        constant_instance = self.view.constant_instance
+        const_key = consts.ConstKey()
+
+        try:
+            replay_tolerance = constant_instance.get(const_key.replay_tolerance)
+            replay_tolerance = float(replay_tolerance)
+        except errors.DataNotFoundError:
+            replay_tolerance = \
+                const_key.default_value(const_key.replay_tolerance)
+
+        request_time = request_time.replace(tzinfo=None)
+        now = datetime.datetime.now()
+        delta_seconds = abs((now - request_time).total_seconds())
+
+        if delta_seconds > replay_tolerance:
+            raise errors.ReplayAttackSuspected
+
+
+    def _get_token(self, token):
+        token_instance = self.view.token_instance
+        try:
+            return token_instance.get(token)
+        except errors.DataNotFoundError:
+            raise errors.NeedLogin
+
+
+    def _check_expired(self, stoken):
+        pass
+
+
+    def _check_signature(self, stoken, signature, data):
+        pass
+
+
+    def process(self):
+        data_copy = copy.deepcopy(self.data)
+
+        auth_fields = self._get_auth_fields(data_copy)
+        if not auth_fields:
+            return data_copy
+
+        token, signature, request_time = auth_fields
+        self._check_time(request_time)
+        stoken = self._get_token(token)
+
+        return data_copy
+
+
+
+class RequestPermProcessor(Processor):
+    """
+    Use filter pattern to process response data in many ways.
+    """
+
+
+    def process(self):
+        view = self.view
+        request = self.request
+        data = self.data
+
+        data = RequestAuthProcessor(view, request, data).process()
+
         return data
