@@ -46,7 +46,7 @@ class User(models.Model):
 
 
     def __str__(self):
-        return str(self.uid)
+        return str(self.user_id)
 
 
     def delete(self, using=None, keep_parents=False):
@@ -60,7 +60,7 @@ class SToken(models.Model):
     The default authorization token model.
     """
     token = models.UUIDField(primary_key=True, default=uuid.uuid4, unique=True)
-    key = models.UUIDField(default=uuid.uuid4)
+    secret = models.UUIDField(default=uuid.uuid4)
     user = models.ForeignKey(User, related_name='auth_token',
                              on_delete=models.CASCADE)
     host = models.CharField(max_length=128, null=False, blank=True, default='*')

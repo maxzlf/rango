@@ -1,7 +1,4 @@
-from django.db import IntegrityError
-from django.contrib.auth.hashers import check_password, make_password
 from .. import errors
-from ..utils import pagination
 from .models import SToken
 
 
@@ -9,37 +6,19 @@ from .models import SToken
 class Token:
 
 
-    def get(self, user_id=None, account=None):
-        if not (user_id or account):
-            assert False
-
-        params = dict(user_id=user_id, account=account)
-        params = {k: v for k, v in params.items() if v is not None}
-
+    def get(self, token):
         try:
-            return UserM.objects.get(**params)
-        except UserM.DoesNotExist:
-            msg = 'User of user_id {} not found.'.format(user_id)
+            return SToken.objects.get(token)
+        except SToken.DoesNotExist:
+            msg = 'Token {} not found.'.format(token)
             raise errors.DataNotFoundError(msg)
 
 
-    def add(self, account, password, is_activated=False):
-        password = make_password(password)
-        params = dict(account=account, password=password,
-                      is_activated=is_activated)
+    def add(self, user, expiry_date, host=None):
+        params = dict(user=user, expiry_date=expiry_date, host=host)
         params = {k: v for k, v in params.items() if v is not None}
-        return UserM.objects.create(**params)
+        return SToken.objects.create(**params)
 
 
-    def delete(self, user_id=None, account=None):
-        self.get(user_id=user_id, account=account).delete()
-
-
-    def list(self, filters=None, options=None):
-        query_set = UserM.objects.all()
-        if filters:
-            params = {k: v for k, v in filters.items() if v is not None}
-            query_set = set.filter(**params)
-        total = len(query_set)
-        query_set = pagination.order_and_pagination(query_set, options)
-        return total, query_set
+    def delete(self, token):
+        self.get(token).delete()
