@@ -1,62 +1,52 @@
 from django.db import IntegrityError
 from .. import errors
+from .. import object_accessor
+from ..utils import pagination
 from . import models
 
 
 
-class Constant:
-    __cache = None    # class level cache
+class AbstractConstant(object_accessor.ObjectAccessor):
 
 
-    def __init__(self, cache=None):
-        self._cache = None
-        if cache:
-            self._cache = cache
-        elif Constant.__cache:
-            self._cache = Constant.__cache
-        else:
-            pass
+    def get(self, key, **kwargs):
+        raise NotImplementedError
 
 
-    @classmethod
-    def set_catch(cls, cache):
-        Constant.__cache = cache
+    def add(self, **kwargs):
+        raise NotImplementedError
 
 
-    def _get_constant(self, key):
+    def update(self, **kwargs):
+        raise NotImplementedError
+
+
+    def add_or_update(self, **kwargs):
+        raise NotImplementedError
+
+
+    def delete(self, key, **kwargs):
+        raise NotImplementedError
+
+
+    def list(self, filters=None, options=None):
+        raise NotImplementedError
+
+
+
+class DBConstant(AbstractConstant):
+
+
+    def _get(self, key):
         try:
             return models.YConstant.objects.get(key=key)
         except models.YConstant.DoesNotExist:
+            msg = 'Constant {} not found.'.format(key)
             raise errors.DataNotFoundError
 
 
-    def compose_constant_cache_key(self, key):
-        return 'CONSTANT_' + key
-
-
-    def get(self, key):
-        """
-        get constant value by specified key
-        1. try get from cache
-        2. if it's in cache, just return from cache
-        3. if not in cache, return from database and reset cache
-        :exception: ConstantNotFound
-        """
-        value = None
-        cache_key = self.compose_constant_cache_key(key)
-
-        if self._cache:
-            value = self._cache.get(cache_key)
-
-        if value is None:
-            constant = self._get_constant(key)
-            value = constant.value
-            if self._cache:
-                self._cache.set(cache_key, value)
-        else:
-            pass
-
-        return value
+    def get(self, key, **kwargs):
+        return self._get(key).value
 
 
     def add(self, key, value, description=''):
@@ -72,22 +62,13 @@ class Constant:
 
 
     def update(self, key, value=None, description=None):
-        """
-        1. turn value to str
-        2. update to database
-        3. update to cache
-        """
-        constant = self._get_constant(key)
+        constant = self._get(key)
+
         if value is not None:
-            value = str(value)
-            constant.value = value
-        if description:
+            constant.value = str(value)
+        if description is not None:
             constant.description = description
         constant.save()
-
-        if self._cache and value is not None:
-            cache_key = self.compose_constant_cache_key(key)
-            self._cache.set(cache_key, value)
 
         return constant
 
@@ -99,20 +80,20 @@ class Constant:
             return self.update(key, value, description)
 
 
-    def delete(self, key):
-        """
-        1. delete from cache
-        2. delete from database
-        """
-        if self._cache:
-            cache_key = self.compose_constant_cache_key(key)
-            self._cache.delete(cache_key)
-
-        constant = self._get_constant(key)
-        constant.delete()
+    def delete(self, key, **kwargs):
+        self._get(key).delete()
 
 
-    def list(self):
+    def list(self, filters=None, options=None):
         query_set = models.YConstant.objects.all()
         total = len(query_set)
+        query_set = pagination.order_and_pagination(query_set, options)
         return total, query_set
+
+
+
+class DBConstantFactory(object_accessor.AccessorFactory):
+
+
+    def create(self, **kwargs):
+        return DBConstant()

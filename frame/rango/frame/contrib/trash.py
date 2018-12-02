@@ -2,35 +2,62 @@
 import json
 import copy
 import logging
+from .. import object_accessor
+from ..utils import pagination
 from ..utils.json import JsonEncoder
-from . import models
+from .models import Trash as TrashM
 
 
-logger = logging.getLogger(__name__)
+app_logger = logging.getLogger('APP')
 
 
 
-class Trash:
+class AbstractTrash(object_accessor.ObjectAccessor):
 
 
-    def __init__(self, model):
-        self._model = model
+    def get(self, object_id, **kwargs):
+        raise NotImplementedError
 
 
-    def add(self, content, comment=''):
-        models.Trash.objects.create(model=self._model,
-                                    content=content,
-                                    comment=comment)
+    def add(self, **kwargs):
+        raise NotImplementedError
 
 
-    def gets(self):
-        trashes = models.Trash.objects.filter(model=self._model)
-        return trashes
+    def update(self, **kwargs):
+        raise NotImplementedError
+
+
+    def delete(self, object_id, **kwargs) -> None:
+        raise NotImplementedError
+
+
+    def list(self, filters=None, options=None):
+        raise NotImplementedError
+
+
+
+class DBTrash(AbstractTrash):
+
+
+    def add(self, model, content, comment=''):
+        return TrashM.objects.create(model=model,
+                                     content=content,
+                                     comment=comment)
+
+
+    def list(self, filters=None, options=None):
+        query_set = TrashM.objects.all()
+        if filters:
+            params = {k: v for k, v in filters.items() if v is not None}
+            query_set = query_set.filter(**params)
+        total = len(query_set)
+        query_set = pagination.order_and_pagination(query_set, options)
+        return total, query_set
+
 
 
 def move2trash(obj):
     content = copy.copy(obj.__dict__)
-    if '_state' in content.keys():
-        del content['_state']
+    content.pop('_state', None)
     content = json.dumps(content, cls=JsonEncoder)
-    Trash(obj.__class__.__name__).add(content)
+    DBTrash().add(obj.__class__.__name__, content)

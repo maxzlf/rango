@@ -1,12 +1,37 @@
 from .. import errors
+from .. import object_accessor
 from .models import SToken
 
 
 
-class Token:
+class AbstractToken(object_accessor.ObjectAccessor):
 
 
-    def get(self, token):
+    def get(self, token, **kwargs):
+        raise NotImplementedError
+
+
+    def add(self, **kwargs):
+        raise NotImplementedError
+
+
+    def update(self, **kwargs):
+        raise NotImplementedError
+
+
+    def delete(self, token, **kwargs) -> None:
+        pass
+
+
+    def list(self, filters=None, options=None):
+        raise NotImplementedError
+
+
+
+class DBToken(AbstractToken):
+
+
+    def get(self, token, **kwargs):
         try:
             return SToken.objects.get(token=token)
         except SToken.DoesNotExist:
@@ -20,5 +45,21 @@ class Token:
         return SToken.objects.create(**params)
 
 
-    def delete(self, token):
+    def update(self, **kwargs):
+        raise NotImplementedError
+
+
+    def delete(self, token, **kwargs):
         self.get(token).delete()
+
+
+    def list(self, filters=None, options=None):
+        raise NotImplementedError
+
+
+
+class DBTokenFactory(object_accessor.AccessorFactory):
+
+
+    def create(self, **kwargs):
+        return DBToken()

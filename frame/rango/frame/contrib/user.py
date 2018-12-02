@@ -1,12 +1,41 @@
 from django.db import IntegrityError
 from django.contrib.auth.hashers import check_password, make_password
 from .. import errors
+from .. import object_accessor
 from ..utils import pagination
 from .models import User as UserM
 
 
 
-class User:
+class AbstractUser(object_accessor.ObjectAccessor):
+
+
+    def get(self, user_id, **kwargs):
+        raise NotImplementedError
+
+
+    def add(self, **kwargs):
+        raise NotImplementedError
+
+
+    def update(self, **kwargs):
+        raise NotImplementedError
+
+
+    def delete(self, user_id, **kwargs) -> None:
+        pass
+
+
+    def list(self, filters=None, options=None):
+        raise NotImplementedError
+
+
+    def check_password(self, password, user_id, account):
+        raise NotImplementedError
+
+
+
+class DBUser(AbstractUser):
 
 
     def get(self, user_id=None, account=None):
@@ -19,7 +48,8 @@ class User:
         try:
             return UserM.objects.get(**params)
         except UserM.DoesNotExist:
-            msg = 'User of user_id {} not found.'.format(user_id)
+            msg = 'User of user_id {} or account {} not found.'\
+                .format(user_id, account)
             raise errors.DataNotFoundError(msg)
 
 
@@ -61,7 +91,15 @@ class User:
         query_set = UserM.objects.all()
         if filters:
             params = {k: v for k, v in filters.items() if v is not None}
-            query_set = set.filter(**params)
+            query_set = query_set.filter(**params)
         total = len(query_set)
         query_set = pagination.order_and_pagination(query_set, options)
         return total, query_set
+
+
+
+class DBUserFactory(object_accessor.AccessorFactory):
+
+
+    def create(self, **kwargs):
+        return DBUser()

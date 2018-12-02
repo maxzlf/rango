@@ -1,4 +1,4 @@
-class CacheClient:
+class AbstractCache:
 
 
     def get(self, key):
@@ -18,4 +18,16 @@ class CacheClient:
 
 
     def flush(self):
+        raise NotImplementedError
+
+
+
+class CacheFactory:
+
+
+    def __init__(self, **kwargs):
+        raise NotImplementedError
+
+
+    def create(self, **kwargs) -> AbstractCache:
         raise NotImplementedError
