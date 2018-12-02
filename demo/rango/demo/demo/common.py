@@ -1,6 +1,8 @@
 from rest_framework.generics import GenericAPIView
 from rest_framework.viewsets import ModelViewSet
 from rango.frame.views import LoggedAPIView
+from rango.frame.contrib.token import DBTokenFactory
+from rango.frame.contrib.constant import DBConstantFactory
 from rango.frame.serializers import APISerializer, ListSerializer
 
 
@@ -16,7 +18,12 @@ class DemoListSerializer(ListSerializer):
 
 
 class DemoViewMixin(LoggedAPIView):
-    pass
+
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.const_accessor = DBConstantFactory().create()
+        self.token_accessor = DBTokenFactory().create()
 
 
 

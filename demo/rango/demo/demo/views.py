@@ -1,9 +1,6 @@
 import datetime
-from rango.frame import errors
 from rango.frame.views import request_wrapper
-from rango.frame.contrib import constant
-from rango.frame.contrib.user import User
-from rango.frame.contrib.token import Token
+from rango.frame.contrib.user import DBUserFactory
 from .student import Student
 from .common import DemoAPIView
 from . import serializers
@@ -55,20 +52,22 @@ class ConstantsView(DemoAPIView):
 
     @request_wrapper
     def post(self, request, valid_data):
-        const = constant.Constant().add(**valid_data)
+        const = self.const_accessor.add(**valid_data)
         result = dict(key=const.key, value=const.value,
                       description=const.description)
         return result
 
 
     @request_wrapper
-    def get(self, request, valid_data):
-        total, consts = constant.Constant().list()
+    def get(self, request, valid_data=None):
+        total, constants = self.const_accessor.list()
         result = dict(total=total, entries=[])
-        for const in consts:
+
+        for const in constants:
             result['entries'].append(dict(key=const.key,
                                           value=const.value,
                                           description=const.description))
+        print(result)
         return result
 
 
@@ -79,14 +78,14 @@ class ConstantView(DemoAPIView):
 
     @request_wrapper
     def get(self, request, key, valid_data=None):
-        value = constant.Constant().get(key)
+        value = self.const_accessor.get(key)
         result = dict(key=key, value=value)
         return result
 
 
     @request_wrapper
     def put(self, request, key, valid_data=None):
-        const = constant.Constant().update(key, **valid_data)
+        const = self.const_accessor.update(key, **valid_data)
         result = dict(key=const.key, value=const.value,
                       description=const.description)
         return result
@@ -94,7 +93,7 @@ class ConstantView(DemoAPIView):
 
     @request_wrapper
     def delete(self, request, key, valid_data=None):
-        constant.Constant().delete(key)
+        self.const_accessor.delete(key)
         return dict()
 
 
@@ -155,7 +154,8 @@ class UsersView(DemoAPIView):
 
     @request_wrapper
     def post(self, request, valid_data):
-        user = User().add(**valid_data)
+        user_accessor = DBUserFactory().create()
+        user = user_accessor.add(**valid_data)
         result = dict(user_id=user.user_id,
                       account=user.account,
                       is_activated=user.is_activated,
@@ -166,8 +166,9 @@ class UsersView(DemoAPIView):
 
     @request_wrapper
     def get(self, request, valid_data):
+        user_accessor = DBUserFactory().create()
         options = valid_data.get('options', None)
-        total, users = User().list(options=options)
+        total, users = user_accessor.list(options=options)
         result = dict(total=total, entries=[])
         for user in users:
             result['entries'].append(dict(user_id=user.user_id,
@@ -186,34 +187,34 @@ class LoginView(DemoAPIView):
     @request_wrapper
     def post(self, request, valid_data):
         const_key = consts.DemoConstKey()
-        try:
-            replay_tolerance = \
-                self.constant_instance.get(const_key.replay_tolerance)
-            replay_tolerance = float(replay_tolerance)
-            expiry_seconds = \
-                self.constant_instance.get(const_key.expiry_seconds)
-            expiry_seconds = float(expiry_seconds)
-        except errors.DataNotFoundError:
-            replay_tolerance = \
-                const_key.default_value(const_key.replay_tolerance)
-            expiry_seconds = \
-                const_key.default_value(const_key.expiry_seconds)
-
-        request_time = valid_data['request_time'].replace(tzinfo=None)
-        now = datetime.datetime.now()
-        delta_seconds = abs((now - request_time).total_seconds())
-
-        if delta_seconds > replay_tolerance:
-            raise errors.ReplayAttackSuspected
-
-        user = User().get(account=valid_data['account'])
-        expiry_time = datetime.datetime.now() + \
-            datetime.timedelta(seconds=expiry_seconds)
-        stoken = Token().add(user=user, expiry_time=expiry_time)
-        result = dict(token=stoken.token, secret=stoken.secret,
-                      host=stoken.host, expiry_time=stoken.expiry_time,
-                      create_time=stoken.create_time)
-        return result
+        # try:
+        #     replay_tolerance = \
+        #         self.constant_instance.get(const_key.replay_tolerance)
+        #     replay_tolerance = float(replay_tolerance)
+        #     expiry_seconds = \
+        #         self.constant_instance.get(const_key.expiry_seconds)
+        #     expiry_seconds = float(expiry_seconds)
+        # except errors.DataNotFoundError:
+        #     replay_tolerance = \
+        #         const_key.default_value(const_key.replay_tolerance)
+        #     expiry_seconds = \
+        #         const_key.default_value(const_key.expiry_seconds)
+        #
+        # request_time = valid_data['request_time'].replace(tzinfo=None)
+        # now = datetime.datetime.now()
+        # delta_seconds = abs((now - request_time).total_seconds())
+        #
+        # if delta_seconds > replay_tolerance:
+        #     raise errors.ReplayAttackSuspected
+        #
+        # user = User().get(account=valid_data['account'])
+        # expiry_time = datetime.datetime.now() + \
+        #     datetime.timedelta(seconds=expiry_seconds)
+        # stoken = Token().add(user=user, expiry_time=expiry_time)
+        # result = dict(token=stoken.token, secret=stoken.secret,
+        #               host=stoken.host, expiry_time=stoken.expiry_time,
+        #               create_time=stoken.create_time)
+        return dict()
 
 
     @request_wrapper

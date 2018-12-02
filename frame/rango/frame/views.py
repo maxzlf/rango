@@ -10,11 +10,12 @@ from rest_framework.views import APIView, set_rollback
 from rest_framework.utils.encoders import JSONEncoder
 
 from . import errors
-from . import consts
-from .contrib import constant, token
+from .consts import BaseConst
 from .utils.ipware import get_ip
 from .serializers import APISerializer
-from .permissions import AllowAny, DenyAny
+from .contrib.token import AbstractToken
+from .permissions import DenyAny, AllowAny
+from .contrib.constant import AbstractConstant
 from .processor import RequestProcessor, RequestPermProcessor, ResponseProcessor
 
 
@@ -28,13 +29,13 @@ class LoggedAPIView(APIView):
     get_permission_classes = (DenyAny, )
     delete_permission_classes = (DenyAny, )
     serializer_classes = None
-    constant_instance = constant.Constant()
-    token_instance = token.Token()
 
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self._log_id = str(uuid4())
+        self.const_accessor = AbstractConstant()
+        self.token_accessor = AbstractToken()
 
 
     def initialize_request(self, request, *args, **kwargs):
@@ -137,20 +138,11 @@ class LoggedAPIView(APIView):
 
 
 class StaticView(LoggedAPIView):
-    permission_classes = (AllowAny,)
     content = {'message': 'Hello, MSA.'}
 
 
     def get(self, request, format=None):
         return Response(self.content)
-
-
-def is_debug_mode():
-    try:
-        debug_mode = constant.Constant().get(consts.ConstKey().debug_mode)
-        return debug_mode in ('True', 'true')
-    except errors.DataNotFoundError:
-        return False
 
 
 def exception_handler(exc, context):
@@ -167,17 +159,13 @@ def exception_handler(exc, context):
         if isinstance(exc, errors.BaseError):
             raise exc
         elif isinstance(exc, ValidationError):
-            raise errors.ParamError(details=exc.detail)
+            raise errors.ParamError(msg=exc.detail)
         else:
             raise errors.ServerUnknownError
-    except errors.BaseError as e:
-        data = dict(code=e.code,
-                    msg=e.msg,
-                    details=e.details if e.details else traceback.format_exc())
-        if not is_debug_mode():
-            del data['details']
+    except errors.BaseError as exc:
+        data = dict(code=exc.code, msg=exc.msg)
         set_rollback()
-        return Response(data, status=e.status_code)
+        return Response(data, status=exc.status_code)
 
 
 def request_wrapper(func):
@@ -190,16 +178,34 @@ def request_wrapper(func):
     def wrapper(*args, **kwargs):
         view = args[0]
         request = args[1]
-
         assert isinstance(view, LoggedAPIView)
         assert isinstance(request, Request)
 
-        valid_data = view.get_validated_data(request)
-        valid_data = RequestProcessor(view, request, valid_data).process()
-        valid_data = RequestPermProcessor(view, request, valid_data).process()
-
-        res_data = func(*args, **kwargs, valid_data=valid_data)
-        res_data = ResponseProcessor(view, request, res_data).process()
-        return Response(res_data)
+        try:
+            try:
+                valid_data = view.get_validated_data(request)
+                valid_data =\
+                    RequestProcessor(view, request, valid_data).process()
+                # valid_data = \
+                #     RequestPermProcessor(view, request, valid_data).process()
+                res_data = func(*args, **kwargs, valid_data=valid_data)
+                res_data = ResponseProcessor(view, request, res_data).process()
+                return Response(res_data)
+            except Exception as exc:
+                if isinstance(exc, errors.BaseError):
+                    raise exc
+                elif isinstance(exc, ValidationError):
+                    raise errors.ParamError(msg=exc.detail)
+                else:
+                    raise errors.ServerUnknownError
+        except errors.BaseError as exc:
+            data = dict(code=exc.code, msg=exc.msg,
+                        details=exc.details if exc.details
+                        else traceback.format_exc())
+            base_const = BaseConst(view.const_accessor)
+            if not base_const.debug_mode:
+                del data['details']
+            set_rollback()
+            return Response(data, status=exc.status_code)
 
     return wrapper

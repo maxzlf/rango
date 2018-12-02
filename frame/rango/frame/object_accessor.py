@@ -25,9 +25,5 @@ class ObjectAccessor:
 class AccessorFactory:
 
 
-    def __init__(self, **kwargs):
-        raise NotImplementedError
-
-
     def create(self, **kwargs) -> ObjectAccessor:
         raise NotImplementedError

@@ -1,8 +1,9 @@
-from rango.frame.consts import ConstKey
+from rango.frame import errors
+from rango.frame.consts import BaseConstKey, BaseConst
 
 
 
-class DemoConstKey(ConstKey):
+class DemoConstKey(BaseConstKey):
 
 
     @property
@@ -23,3 +24,17 @@ class DemoConstKey(ConstKey):
         if value is None:
             value = default.get(key, None)
         return value
+
+
+
+class DemoConst(BaseConst):
+
+
+    @property
+    def expiry_seconds(self):
+        try:
+            value = self._constant.get(self._const_key.replay_tolerance)
+            return int(value)
+        except errors.DataNotFoundError:
+            key = self._const_key.replay_tolerance
+            return self._const_key.default_value(key)
