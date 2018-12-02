@@ -14,8 +14,8 @@ class Token:
             raise errors.DataNotFoundError(msg)
 
 
-    def add(self, user, expiry_date, host=None):
-        params = dict(user=user, expiry_date=expiry_date, host=host)
+    def add(self, user, expiry_time, host=None):
+        params = dict(user=user, expiry_time=expiry_time, host=host)
         params = {k: v for k, v in params.items() if v is not None}
         return SToken.objects.create(**params)
 

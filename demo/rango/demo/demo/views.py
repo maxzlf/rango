@@ -1,9 +1,13 @@
 import datetime
+from rango.frame import errors
 from rango.frame.views import request_wrapper
 from rango.frame.contrib import constant
+from rango.frame.contrib.user import User
+from rango.frame.contrib.token import Token
 from .student import Student
 from .common import DemoAPIView
 from . import serializers
+from . import consts
 
 
 
@@ -145,4 +149,74 @@ class StudentView(DemoAPIView):
 
 
 class UsersView(DemoAPIView):
-    pass
+    serializer_classes = {'GET': serializers.UsersListSerializer,
+                          'POST': serializers.UsersPostSerializer}
+
+
+    @request_wrapper
+    def post(self, request, valid_data):
+        user = User().add(**valid_data)
+        result = dict(user_id=user.user_id,
+                      account=user.account,
+                      is_activated=user.is_activated,
+                      create_time=user.create_time,
+                      update_time=user.update_time)
+        return result
+
+
+    @request_wrapper
+    def get(self, request, valid_data):
+        options = valid_data.get('options', None)
+        total, users = User().list(options=options)
+        result = dict(total=total, entries=[])
+        for user in users:
+            result['entries'].append(dict(user_id=user.user_id,
+                                          account=user.account,
+                                          is_activated=user.is_activated,
+                                          create_time=user.create_time,
+                                          update_time=user.update_time))
+        return result
+
+
+
+class LoginView(DemoAPIView):
+    serializer_classes = {'POST': serializers.LoginSerializer}
+
+
+    @request_wrapper
+    def post(self, request, valid_data):
+        const_key = consts.DemoConstKey()
+        try:
+            replay_tolerance = \
+                self.constant_instance.get(const_key.replay_tolerance)
+            replay_tolerance = float(replay_tolerance)
+            expiry_seconds = \
+                self.constant_instance.get(const_key.expiry_seconds)
+            expiry_seconds = float(expiry_seconds)
+        except errors.DataNotFoundError:
+            replay_tolerance = \
+                const_key.default_value(const_key.replay_tolerance)
+            expiry_seconds = \
+                const_key.default_value(const_key.expiry_seconds)
+
+        request_time = valid_data['request_time'].replace(tzinfo=None)
+        now = datetime.datetime.now()
+        delta_seconds = abs((now - request_time).total_seconds())
+
+        if delta_seconds > replay_tolerance:
+            raise errors.ReplayAttackSuspected
+
+        user = User().get(account=valid_data['account'])
+        expiry_time = datetime.datetime.now() + \
+            datetime.timedelta(seconds=expiry_seconds)
+        stoken = Token().add(user=user, expiry_time=expiry_time)
+        result = dict(token=stoken.token, secret=stoken.secret,
+                      host=stoken.host, expiry_time=stoken.expiry_time,
+                      create_time=stoken.create_time)
+        return result
+
+
+    @request_wrapper
+    def delete(self, request, valid_data=None):
+        user = request.user
+        # Token().delete(user.)

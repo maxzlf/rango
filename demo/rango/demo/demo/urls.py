@@ -11,4 +11,5 @@ urlpatterns = [
     re_path('^v1.0/constants$', views.ConstantsView.as_view()),
     re_path('^v1.0/constants/(?P<key>[0-9a-zA-Z-_]+)$',
             views.ConstantView.as_view()),
+    re_path('^v1.0/login$', views.LoginView.as_view()),
 ]
