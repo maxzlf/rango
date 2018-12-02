@@ -72,38 +72,39 @@ class BaseConstKey(YJEnum):
 
 
 class BaseConst:
+    const_key = BaseConstKey()
 
 
     def __init__(self, constant):
         assert isinstance(constant, AbstractConstant)
         self._constant = constant
-        self._const_key = BaseConstKey()
+
 
 
     @property
     def token(self):
         try:
-            return self._constant.get(self._const_key.token)
+            return self._constant.get(self.const_key.token)
         except errors.DataNotFoundError:
-            return self._const_key.default_value(self._const_key.token)
+            return self.const_key.default_value(self.const_key.token)
 
 
     @property
     def activated(self):
         try:
-            value = self._constant.get(self._const_key.activated)
+            value = self._constant.get(self.const_key.activated)
             return value in ('True', 'true', True)
         except errors.DataNotFoundError:
-            return self._const_key.default_value(self._const_key.activated)
+            return self.const_key.default_value(self.const_key.activated)
 
 
 
     @property
     def debug_mode(self):
         try:
-            value = self._constant.get(self._const_key.debug_mode)
+            value = self._constant.get(self.const_key.debug_mode)
         except errors.DataNotFoundError:
-            value = self._const_key.default_value(self._const_key.debug_mode)
+            value = self.const_key.default_value(self.const_key.debug_mode)
 
         return value in ('True', 'true', True)
 
@@ -111,8 +112,8 @@ class BaseConst:
     @property
     def replay_tolerance(self):
         try:
-            value = self._constant.get(self._const_key.replay_tolerance)
+            value = self._constant.get(self.const_key.replay_tolerance)
             return float(value)
         except errors.DataNotFoundError:
-            key = self._const_key.replay_tolerance
-            return self._const_key.default_value(key)
+            key = self.const_key.replay_tolerance
+            return self.const_key.default_value(key)

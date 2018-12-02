@@ -1,10 +1,12 @@
 import datetime
 from rango.frame.views import request_wrapper
+from rango.frame import errors
+from rango.frame.utils import time
 from rango.frame.contrib.user import DBUserFactory
 from .student import Student
 from .common import DemoAPIView
 from . import serializers
-from . import consts
+from .consts import DemoConst
 
 
 
@@ -186,35 +188,26 @@ class LoginView(DemoAPIView):
 
     @request_wrapper
     def post(self, request, valid_data):
-        const_key = consts.DemoConstKey()
-        # try:
-        #     replay_tolerance = \
-        #         self.constant_instance.get(const_key.replay_tolerance)
-        #     replay_tolerance = float(replay_tolerance)
-        #     expiry_seconds = \
-        #         self.constant_instance.get(const_key.expiry_seconds)
-        #     expiry_seconds = float(expiry_seconds)
-        # except errors.DataNotFoundError:
-        #     replay_tolerance = \
-        #         const_key.default_value(const_key.replay_tolerance)
-        #     expiry_seconds = \
-        #         const_key.default_value(const_key.expiry_seconds)
-        #
-        # request_time = valid_data['request_time'].replace(tzinfo=None)
-        # now = datetime.datetime.now()
-        # delta_seconds = abs((now - request_time).total_seconds())
-        #
-        # if delta_seconds > replay_tolerance:
-        #     raise errors.ReplayAttackSuspected
-        #
-        # user = User().get(account=valid_data['account'])
-        # expiry_time = datetime.datetime.now() + \
-        #     datetime.timedelta(seconds=expiry_seconds)
-        # stoken = Token().add(user=user, expiry_time=expiry_time)
-        # result = dict(token=stoken.token, secret=stoken.secret,
-        #               host=stoken.host, expiry_time=stoken.expiry_time,
-        #               create_time=stoken.create_time)
-        return dict()
+        const = DemoConst(self.const_accessor)
+        replay_tolerance = const.replay_tolerance
+        expiry_seconds = const.expiry_seconds
+
+        delta_seconds = time.delta_seconds(valid_data['request_time'])
+        if delta_seconds > replay_tolerance:
+            raise errors.ReplayAttackSuspected
+
+        user_accessor = DBUserFactory().create()
+        # check password
+        user = user_accessor.get(account=valid_data['account'])
+
+
+        expiry_time = datetime.datetime.now() + \
+            datetime.timedelta(seconds=expiry_seconds)
+        stoken = self.token_accessor.add(user=user, expiry_time=expiry_time)
+        result = dict(token=stoken.token, secret=stoken.secret,
+                      host=stoken.host, expiry_time=stoken.expiry_time,
+                      create_time=stoken.create_time)
+        return result
 
 
     @request_wrapper

@@ -28,13 +28,14 @@ class DemoConstKey(BaseConstKey):
 
 
 class DemoConst(BaseConst):
+    const_key = DemoConstKey()
 
 
     @property
     def expiry_seconds(self):
         try:
-            value = self._constant.get(self._const_key.replay_tolerance)
+            value = self._constant.get(self.const_key.expiry_seconds)
             return int(value)
         except errors.DataNotFoundError:
-            key = self._const_key.replay_tolerance
-            return self._const_key.default_value(key)
+            key = self.const_key.expiry_seconds
+            return self.const_key.default_value(key)
