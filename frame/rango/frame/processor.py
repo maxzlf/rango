@@ -118,7 +118,7 @@ class ResponseCheckProcessor(Processor):
     def process(self):
         data_copy = copy.deepcopy(self.data)
         try:
-            serializer = self.view.get_serializer_class()
+            serializer = self.view.get_serializer_class()(data=data_copy)
             _declared_fields = serializer._declared_fields
             _declared_fields_copy = copy.deepcopy(_declared_fields)
 
@@ -127,7 +127,7 @@ class ResponseCheckProcessor(Processor):
                     del _declared_fields_copy[field]
 
             serializer._declared_fields = _declared_fields_copy
-            serializer(data=data_copy).is_valid(raise_exception=True)
+            serializer.is_valid(raise_exception=True)
             return data_copy
         except exceptions.ValidationError as e:
             raise errors.DataInValidError(msg=e.detail)
@@ -196,9 +196,10 @@ class RequestAuthProcessor(Processor):
     def _get_auth_fields(self, data):
         token = self.request.META.get('HTTP_TOKEN', None)
         signature = self.request.META.get('HTTP_SIGNATURE', None)
-        request_time = data.pop('request_time', None)
+        request_time = data.get('request_time', None)
 
         if token and signature and request_time:
+            del data['request_time']
             return token, signature, request_time
         else:
             return None
