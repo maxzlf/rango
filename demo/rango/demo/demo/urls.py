@@ -1,5 +1,5 @@
 from django.conf.urls import re_path
-from . import views
+from . import views, tool_views
 
 
 urlpatterns = [
@@ -12,4 +12,5 @@ urlpatterns = [
     re_path('^v1.0/constants/(?P<key>[0-9a-zA-Z-_]+)$',
             views.ConstantView.as_view()),
     re_path('^v1.0/login$', views.LoginView.as_view()),
+    re_path('^tools/v1.0/hmac$', tool_views.HmacView.as_view()),
 ]

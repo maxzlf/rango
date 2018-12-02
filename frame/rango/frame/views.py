@@ -155,6 +155,7 @@ def exception_handler(exc, context):
     Any unhandled exceptions may return `unknown error`,
     which will cause a 500 error to be raised.
     """
+    api_logger = logging.getLogger('API')
     try:
         if isinstance(exc, errors.BaseError):
             raise exc
@@ -164,6 +165,7 @@ def exception_handler(exc, context):
             raise errors.ServerUnknownError
     except errors.BaseError as exc:
         data = dict(code=exc.code, msg=exc.msg)
+        api_logger.error(traceback.format_exc())
         set_rollback()
         return Response(data, status=exc.status_code)
 
