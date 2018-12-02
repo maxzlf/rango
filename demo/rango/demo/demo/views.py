@@ -3,13 +3,11 @@ from rango.frame.views import request_wrapper
 from rango.frame.contrib import constant
 from .student import Student
 from .common import DemoAPIView
-from .permissions import AllowAny
 from . import serializers
 
 
 
 class PingView(DemoAPIView):
-    permission_classes = (AllowAny,)
 
 
     @request_wrapper
@@ -32,7 +30,6 @@ class PingView(DemoAPIView):
 
 
 class ExampleView(DemoAPIView):
-    permission_classes = (AllowAny,)
     serializer_classes = {'POST': serializers.ExampleSerializer,
                           'PUT': serializers.ExampleSerializer}
 
@@ -49,7 +46,6 @@ class ExampleView(DemoAPIView):
 
 
 class ConstantsView(DemoAPIView):
-    permission_classes = (AllowAny,)
     serializer_classes = {'POST': serializers.ConstantsPostSerializer}
 
 
@@ -74,7 +70,6 @@ class ConstantsView(DemoAPIView):
 
 
 class ConstantView(DemoAPIView):
-    permission_classes = (AllowAny,)
     serializer_classes = {'PUT': serializers.ConstantPutSerializer}
 
 
@@ -101,7 +96,6 @@ class ConstantView(DemoAPIView):
 
 
 class StudentsView(DemoAPIView):
-    permission_classes = (AllowAny,)
     serializer_classes = {'GET': serializers.StudentsListSerializer,
                           'POST': serializers.StudentsPostSerializer}
 
@@ -135,7 +129,6 @@ class StudentsView(DemoAPIView):
 
 
 class StudentView(DemoAPIView):
-    permission_classes = (AllowAny,)
 
 
     @request_wrapper
@@ -148,3 +141,8 @@ class StudentView(DemoAPIView):
                       create_time=student.create_time,
                       update_time=student.update_time)
         return result
+
+
+
+class UsersView(DemoAPIView):
+    pass
