@@ -148,7 +148,7 @@ class StaticView(LoggedAPIView):
 def is_debug_mode():
     try:
         debug_mode = constant.Constant().get(consts.ConstKey().debug_mode)
-        return debug_mode == 'True'
+        return debug_mode in ('True', 'true')
     except errors.DataNotFoundError:
         return False
 
