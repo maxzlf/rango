@@ -1,6 +1,9 @@
 import copy
+import json
 import datetime
 from rest_framework import exceptions
+from .utils.json import JsonEncoder
+from .utils.time import delta_seconds
 from . import errors
 from . import consts
 
@@ -199,45 +202,37 @@ class RequestAuthProcessor(Processor):
         request_time = data.get('request_time', None)
 
         if token and signature and request_time:
-            del data['request_time']
             return token, signature, request_time
         else:
             return None
 
 
     def _check_time(self, request_time):
-        constant_instance = self.view.constant_instance
-        const_key = consts.ConstKey()
-
-        try:
-            replay_tolerance = constant_instance.get(const_key.replay_tolerance)
-            replay_tolerance = float(replay_tolerance)
-        except errors.DataNotFoundError:
-            replay_tolerance = \
-                const_key.default_value(const_key.replay_tolerance)
+        const_accessor = self.view.const_accessor
+        base_const = consts.BaseConst(const_accessor)
 
         request_time = request_time.replace(tzinfo=None)
-        now = datetime.datetime.now()
-        delta_seconds = abs((now - request_time).total_seconds())
-
-        if delta_seconds > replay_tolerance:
+        replay_tolerance = base_const.replay_tolerance
+        delta = delta_seconds(request_time)
+        if delta > replay_tolerance:
             raise errors.ReplayAttackSuspected
 
 
     def _get_token(self, token):
-        token_instance = self.view.token_instance
+        token_accessor = self.view.token_accessor
         try:
-            return token_instance.get(token)
+            return token_accessor.get(token)
         except errors.DataNotFoundError:
             raise errors.NeedLogin
 
 
     def _check_expired(self, stoken):
-        pass
+        if stoken.expiry_time < datetime.datetime.now():
+            raise errors.TokenExpired
 
 
     def _check_signature(self, stoken, signature, data):
-        pass
+        print(json.dumps(data))
 
 
     def process(self):
@@ -249,8 +244,12 @@ class RequestAuthProcessor(Processor):
 
         token, signature, request_time = auth_fields
         self._check_time(request_time)
-        stoken = self._get_token(token)
 
+        stoken = self._get_token(token)
+        self._check_expired(stoken)
+        self._check_signature(stoken, signature, data_copy)
+
+        data_copy.pop("request_time", None)
         return data_copy
 
 
@@ -267,5 +266,4 @@ class RequestPermProcessor(Processor):
         data = self.data
 
         data = RequestAuthProcessor(view, request, data).process()
-
         return data

@@ -6,7 +6,12 @@ from . import tool_serializers
 
 
 
-class HmacView(DemoAPIView):
+class ToolView(DemoAPIView):
+    pass
+
+
+
+class HmacView(ToolView):
     serializer_classes = {'POST': tool_serializers.HmacSerializer}
 
 

@@ -188,8 +188,8 @@ def request_wrapper(func):
                 valid_data = view.get_validated_data(request)
                 valid_data =\
                     RequestProcessor(view, request, valid_data).process()
-                # valid_data = \
-                #     RequestPermProcessor(view, request, valid_data).process()
+                valid_data = \
+                    RequestPermProcessor(view, request, valid_data).process()
                 res_data = func(*args, **kwargs, valid_data=valid_data)
                 res_data = ResponseProcessor(view, request, res_data).process()
                 return Response(res_data)
