@@ -62,7 +62,7 @@ class StudentPutSerializer(DemoAPISerializer):
 class UsersPostSerializer(DemoAPISerializer):
     user_id = serializers.UUIDField(required=False)
     account = serializers.CharField(min_length=1, max_length=64)
-    password = serializers.CharField(max_length=128)
+    password = serializers.CharField(min_length=1, max_length=128)
     is_activated = serializers.BooleanField(required=False, default=False)
     create_time = serializers.DateTimeField(required=False)
     update_time = serializers.DateTimeField(required=False)
@@ -90,6 +90,5 @@ class UserPutSerializer(DemoAPISerializer):
 
 class LoginSerializer(DemoAPISerializer):
     account = serializers.CharField(required=True, min_length=1, max_length=64)
-    request_time = serializers.DateTimeField(required=True)
-    hmac = serializers.CharField(required=True, min_length=1, max_length=128)
-    input_only = ('account', 'request_time', 'hmac')
+    password = serializers.CharField(min_length=1, max_length=128)
+    input_only = ('account', 'password')

@@ -188,18 +188,16 @@ class LoginView(DemoAPIView):
 
     @request_wrapper
     def post(self, request, valid_data):
+        account = valid_data['account']
+        password = valid_data['password']
+
         const = DemoConst(self.const_accessor)
-        replay_tolerance = const.replay_tolerance
         expiry_seconds = const.expiry_seconds
 
-        delta_seconds = time.delta_seconds(valid_data['request_time'])
-        if delta_seconds > replay_tolerance:
-            raise errors.ReplayAttackSuspected
-
         user_accessor = DBUserFactory().create()
-        # check password
-        user = user_accessor.get(account=valid_data['account'])
-
+        user = user_accessor.get(account=account)
+        if not user_accessor.check_password(password=password, account=account):
+            raise errors.PasswordError
 
         expiry_time = datetime.datetime.now() + \
             datetime.timedelta(seconds=expiry_seconds)
@@ -212,5 +210,5 @@ class LoginView(DemoAPIView):
 
     @request_wrapper
     def delete(self, request, valid_data=None):
-        user = request.user
-        # Token().delete(user.)
+        stoken = request.stoken
+        stoken.delete()
