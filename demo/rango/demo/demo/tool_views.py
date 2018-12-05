@@ -1,20 +1,37 @@
 import json
 import hmac
 import hashlib
+from rest_framework.generics import GenericAPIView
+from rango.frame.views import LoggedAPIView
 from rango.frame.views import request_wrapper
 from rango.frame.utils.json import JsonEncoder
-from .common import DemoAPIView
+from rango.frame.permissions import AllowAny, IsDebugMode
+from rango.frame.contrib.token import DBTokenFactory
+from rango.frame.contrib.constant import DBConstantFactory
+
 from . import tool_serializers
 
 
 
-class ToolView(DemoAPIView):
+class ToolViewMixin(LoggedAPIView):
+    common_permission_classes = (IsDebugMode, )
+
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.const_accessor = DBConstantFactory().create()
+        self.token_accessor = DBTokenFactory().create()
+
+
+
+class ToolView(ToolViewMixin, GenericAPIView):
     pass
 
 
 
 class HmacView(ToolView):
     serializer_classes = {'POST': tool_serializers.HmacSerializer}
+    post_permission_classes = (AllowAny,)
 
 
     @request_wrapper

@@ -1,34 +1,33 @@
 import datetime
-from rango.frame.views import request_wrapper
+from rest_framework.generics import GenericAPIView
+
 from rango.frame import errors
-from rango.frame.utils import time
+from rango.frame.views import LoggedAPIView
+from rango.frame.views import request_wrapper
+from rango.frame.permissions import AllowAny, IsActivated, IsSTokenAuthenticated
 from rango.frame.contrib.user import DBUserFactory
+from rango.frame.contrib.token import DBTokenFactory
+from rango.frame.contrib.constant import DBConstantFactory
+
 from .student import Student
-from .common import DemoAPIView
 from . import serializers
 from .consts import DemoConst
 
 
 
-class PingView(DemoAPIView):
+class DemoViewMixin(LoggedAPIView):
+    common_permission_classes = (IsActivated, )
 
 
-    @request_wrapper
-    def get(self, request, valid_data):
-        result = dict(time=datetime.datetime.now())
-        from django.contrib.auth.hashers import check_password
-        from django.contrib.auth.hashers import make_password
-        from django.contrib.auth.hashers import is_password_usable
-        password = "plain_text"
-        print(is_password_usable(password))
-        hashed_password = make_password(password)
-        print("Hashed password is:", hashed_password)
-        print(check_password(password, hashed_password))
-        print(check_password("plain_text ", hashed_password))
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.const_accessor = DBConstantFactory().create()
+        self.token_accessor = DBTokenFactory().create()
 
-        print(datetime.datetime.now())
 
-        return result
+
+class DemoAPIView(DemoViewMixin, GenericAPIView):
+    pass
 
 
 
@@ -45,58 +44,6 @@ class ExampleView(DemoAPIView):
     @request_wrapper
     def put(self, request, valid_data):
         return valid_data
-
-
-
-class ConstantsView(DemoAPIView):
-    serializer_classes = {'POST': serializers.ConstantsPostSerializer}
-
-
-    @request_wrapper
-    def post(self, request, valid_data):
-        const = self.const_accessor.add(**valid_data)
-        result = dict(key=const.key, value=const.value,
-                      description=const.description)
-        return result
-
-
-    @request_wrapper
-    def get(self, request, valid_data=None):
-        total, constants = self.const_accessor.list()
-        result = dict(total=total, entries=[])
-
-        for const in constants:
-            result['entries'].append(dict(key=const.key,
-                                          value=const.value,
-                                          description=const.description))
-        print(result)
-        return result
-
-
-
-class ConstantView(DemoAPIView):
-    serializer_classes = {'PUT': serializers.ConstantPutSerializer}
-
-
-    @request_wrapper
-    def get(self, request, key, valid_data=None):
-        value = self.const_accessor.get(key)
-        result = dict(key=key, value=value)
-        return result
-
-
-    @request_wrapper
-    def put(self, request, key, valid_data=None):
-        const = self.const_accessor.update(key, **valid_data)
-        result = dict(key=const.key, value=const.value,
-                      description=const.description)
-        return result
-
-
-    @request_wrapper
-    def delete(self, request, key, valid_data=None):
-        self.const_accessor.delete(key)
-        return dict()
 
 
 
@@ -184,6 +131,8 @@ class UsersView(DemoAPIView):
 
 class LoginView(DemoAPIView):
     serializer_classes = {'POST': serializers.LoginSerializer}
+    post_permission_classes = (AllowAny,)
+    delete_permission_classes = (IsSTokenAuthenticated,)
 
 
     @request_wrapper

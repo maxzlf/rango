@@ -21,9 +21,10 @@ from .processor import RequestProcessor, RequestPermProcessor, ResponseProcessor
 
 
 class LoggedAPIView(APIView):
+    authentication_classes = ()         # don't touch this line
+    permission_classes = (AllowAny, )   # don't touch this line
     api_logger = logging.getLogger('API')
-    authentication_classes = ()
-    permission_classes = (AllowAny, )
+    common_permission_classes = (DenyAny, )
     post_permission_classes = (DenyAny, )
     put_permission_classes = (DenyAny, )
     get_permission_classes = (DenyAny, )
@@ -157,6 +158,7 @@ def exception_handler(exc, context):
     which will cause a 500 error to be raised.
     """
     api_logger = logging.getLogger('API')
+
     try:
         if isinstance(exc, errors.BaseError):
             raise exc
@@ -165,8 +167,12 @@ def exception_handler(exc, context):
         else:
             raise errors.ServerUnknownError
     except errors.BaseError as exc:
-        data = dict(code=exc.code, msg=exc.msg)
-        api_logger.error(traceback.format_exc())
+        data = dict(code=exc.code, msg=exc.msg, details=traceback.format_exc())
+        const_accessor = context['view'].const_accessor
+        api_logger.error(data)
+        base_const = BaseConst(const_accessor)
+        if not base_const.debug_mode:
+            del data['details']
         set_rollback()
         return Response(data, status=exc.status_code)
 
@@ -184,31 +190,11 @@ def request_wrapper(func):
         assert isinstance(view, LoggedAPIView)
         assert isinstance(request, Request)
 
-        try:
-            try:
-                valid_data = view.get_validated_data(request)
-                valid_data =\
-                    RequestProcessor(view, request, valid_data).process()
-                valid_data = \
-                    RequestPermProcessor(view, request, valid_data).process()
-                res_data = func(*args, **kwargs, valid_data=valid_data)
-                res_data = ResponseProcessor(view, request, res_data).process()
-                return Response(res_data)
-            except Exception as exc:
-                if isinstance(exc, errors.BaseError):
-                    raise exc
-                elif isinstance(exc, ValidationError):
-                    raise errors.ParamError(msg=exc.detail)
-                else:
-                    raise errors.ServerUnknownError
-        except errors.BaseError as exc:
-            data = dict(code=exc.code, msg=exc.msg,
-                        details=exc.details if exc.details
-                        else traceback.format_exc())
-            base_const = BaseConst(view.const_accessor)
-            if not base_const.debug_mode:
-                del data['details']
-            set_rollback()
-            return Response(data, status=exc.status_code)
+        valid_data = view.get_validated_data(request)
+        valid_data = RequestProcessor(view, request, valid_data).process()
+        valid_data = RequestPermProcessor(view, request, valid_data).process()
+        res_data = func(*args, **kwargs, valid_data=valid_data)
+        res_data = ResponseProcessor(view, request, res_data).process()
+        return Response(res_data)
 
     return wrapper

@@ -1,9 +1,9 @@
 from rest_framework import serializers
-from .common import DemoAPISerializer
+from rango.frame.serializers import APISerializer
 
 
 
-class HmacSerializer(DemoAPISerializer):
+class HmacSerializer(APISerializer):
     password = serializers.CharField(required=True)
     data = serializers.DictField(required=True)
     hmac = serializers.CharField(required=False)

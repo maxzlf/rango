@@ -1,9 +1,9 @@
 from rest_framework import serializers
-from .common import DemoAPISerializer, DemoListSerializer
+from rango.frame.serializers import APISerializer, ListSerializer
 
 
 
-class ExampleSerializer(DemoAPISerializer):
+class ExampleSerializer(APISerializer):
     foo = serializers.CharField(required=False)
     bar = serializers.IntegerField(min_value=0, max_value=100)
     input_only = ("foo", )
@@ -11,22 +11,7 @@ class ExampleSerializer(DemoAPISerializer):
 
 
 
-class ConstantsPostSerializer(DemoAPISerializer):
-    key = serializers.CharField(required=True, max_length=64)
-    value = serializers.CharField(required=True)
-    description = serializers.CharField(required=False, allow_blank=True,
-                                        max_length=256)
-
-
-
-class ConstantPutSerializer(DemoAPISerializer):
-    value = serializers.CharField(required=False)
-    description = serializers.CharField(required=False, allow_blank=True,
-                                        max_length=256)
-
-
-
-class StudentsPostSerializer(DemoAPISerializer):
+class StudentsPostSerializer(APISerializer):
     student_id = serializers.UUIDField(required=False)
     gender = serializers.IntegerField(required=False,
                                       min_value=0,
@@ -40,12 +25,12 @@ class StudentsPostSerializer(DemoAPISerializer):
 
 
 
-class StudentsListSerializer(DemoListSerializer):
+class StudentsListSerializer(ListSerializer):
     order_by_fields = ('name', 'create_time', 'update_time')
 
 
 
-class StudentPutSerializer(DemoAPISerializer):
+class StudentPutSerializer(APISerializer):
     student_id = serializers.UUIDField(required=False)
     gender = serializers.IntegerField(required=False,
                                       min_value=0,
@@ -59,7 +44,7 @@ class StudentPutSerializer(DemoAPISerializer):
 
 
 
-class UsersPostSerializer(DemoAPISerializer):
+class UsersPostSerializer(APISerializer):
     user_id = serializers.UUIDField(required=False)
     account = serializers.CharField(min_length=1, max_length=64)
     password = serializers.CharField(min_length=1, max_length=128)
@@ -71,12 +56,12 @@ class UsersPostSerializer(DemoAPISerializer):
 
 
 
-class UsersListSerializer(DemoListSerializer):
+class UsersListSerializer(ListSerializer):
     order_by_fields = ('account', 'create_time', 'update_time')
 
 
 
-class UserPutSerializer(DemoAPISerializer):
+class UserPutSerializer(APISerializer):
     user_id = serializers.UUIDField(required=False)
     account = serializers.CharField(required=False, min_length=1, max_length=64)
     password = serializers.CharField(required=False, max_length=128)
@@ -88,7 +73,7 @@ class UserPutSerializer(DemoAPISerializer):
 
 
 
-class LoginSerializer(DemoAPISerializer):
+class LoginSerializer(APISerializer):
     account = serializers.CharField(required=True, min_length=1, max_length=64)
     password = serializers.CharField(min_length=1, max_length=128)
     input_only = ('account', 'password')

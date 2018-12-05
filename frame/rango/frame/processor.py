@@ -265,6 +265,47 @@ class RequestAuthProcessor(Processor):
 
 
 
+class RequestPermissionProcessor(Processor):
+    """
+    Check permissions.
+    """
+
+
+    def _common_permissions(self):
+        common_permissions = self.view.common_permission_classes
+        for p in common_permissions:
+            if not p().has_permission(self.request, self.view):
+                raise errors.PermissionDenied
+
+
+    def _get_method_permissions(self):
+        method = self.request.method
+        if method == 'GET':
+            return self.view.get_permission_classes
+        elif method == 'POST':
+            return self.view.post_permission_classes
+        elif method == 'PUT':
+            return self.view.put_permission_classes
+        elif method == 'DELETE':
+            return self.view.delete_permission_classes
+        else:
+            raise errors.MethodNotAllowed
+
+
+    def _method_permissions(self):
+        method_permissions = self._get_method_permissions()
+        for p in method_permissions:
+            if not p().has_permission(self.request, self.view):
+                raise errors.PermissionDenied
+
+
+    def process(self):
+        self._common_permissions()
+        self._method_permissions()
+        return self.data
+
+
+
 class RequestPermProcessor(Processor):
     """
     Use filter pattern to process response data in many ways.
@@ -277,4 +318,5 @@ class RequestPermProcessor(Processor):
         data = self.data
 
         data = RequestAuthProcessor(view, request, data).process()
+        data = RequestPermissionProcessor(view, request, data).process()
         return data
