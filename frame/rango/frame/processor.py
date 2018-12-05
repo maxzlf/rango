@@ -1,5 +1,7 @@
 import copy
 import json
+import hmac
+import hashlib
 import datetime
 from rest_framework import exceptions
 from .utils.json import JsonEncoder
@@ -200,7 +202,6 @@ class RequestAuthProcessor(Processor):
         token = self.request.META.get('HTTP_TOKEN', None)
         signature = self.request.META.get('HTTP_SIGNATURE', None)
         request_time = data.get('request_time', None)
-
         if token and signature and request_time:
             return token, signature, request_time
         else:
@@ -227,12 +228,19 @@ class RequestAuthProcessor(Processor):
 
 
     def _check_expired(self, stoken):
-        if stoken.expiry_time < datetime.datetime.now():
+        if stoken.expiry_time.replace(tzinfo=None) < datetime.datetime.now():
+            stoken.delete()
             raise errors.TokenExpired
 
 
     def _check_signature(self, stoken, signature, data):
-        print(json.dumps(data))
+        json_data = json.dumps(data, sort_keys=True, cls=JsonEncoder,
+                               ensure_ascii=False, separators=(',', ':'))
+        challenge_signature = hmac.new(str(stoken.secret).encode(),
+                                       msg=json_data.encode(),
+                                       digestmod=hashlib.sha256).digest().hex()
+        if signature != challenge_signature:
+            raise errors.NeedLogin(msg="Token invalid.")
 
 
     def process(self):
@@ -247,7 +255,10 @@ class RequestAuthProcessor(Processor):
 
         stoken = self._get_token(token)
         self._check_expired(stoken)
-        self._check_signature(stoken, signature, data_copy)
+        self._check_signature(stoken, signature, self.request.request_data)
+
+        self.request.stoken = stoken
+        self.request.user = stoken.user
 
         data_copy.pop("request_time", None)
         return data_copy

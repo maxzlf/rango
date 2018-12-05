@@ -77,6 +77,7 @@ class LoggedAPIView(APIView):
 
     def get_validated_data(self, request):
         data = request.GET if request.method == 'GET' else request.data
+        request.request_data = data
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
         return serializer.validated_data

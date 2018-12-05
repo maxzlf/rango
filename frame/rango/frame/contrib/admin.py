@@ -14,7 +14,8 @@ admin.site.register(User, UserAdmin)
 
 
 class STokenAdmin(admin.ModelAdmin):
-    list_display = ('token', 'user', 'host', 'create_time')
+    list_display = ('token', 'secret', 'user', 'host',
+                    'expiry_time', 'create_time')
     fields = ('user', 'host')
     ordering = ('-create_time',)
 
