@@ -31,7 +31,7 @@ class ToolView(ToolViewMixin, GenericAPIView):
 
 class HmacView(ToolView):
     serializer_classes = {'POST': tool_serializers.HmacSerializer}
-    post_permission_classes = (AllowAny,)
+    post_permission_classes = ()
 
 
     @request_wrapper

@@ -97,6 +97,8 @@ class StudentView(DemoAPIView):
 
 
 class UsersView(DemoAPIView):
+    post_permission_classes = ()
+    get_permission_classes = ()
     serializer_classes = {'GET': serializers.UsersListSerializer,
                           'POST': serializers.UsersPostSerializer}
 
@@ -131,7 +133,7 @@ class UsersView(DemoAPIView):
 
 class LoginView(DemoAPIView):
     serializer_classes = {'POST': serializers.LoginSerializer}
-    post_permission_classes = (AllowAny,)
+    post_permission_classes = ()
     delete_permission_classes = (IsSTokenAuthenticated,)
 
 

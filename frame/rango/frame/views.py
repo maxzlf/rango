@@ -77,7 +77,8 @@ class LoggedAPIView(APIView):
 
 
     def get_validated_data(self, request):
-        data = request.GET if request.method == 'GET' else request.data
+        data = request.GET if request.method in ('GET', 'DELETE') \
+            else request.data
         request.request_data = data
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
@@ -194,6 +195,7 @@ def request_wrapper(func):
         valid_data = RequestProcessor(view, request, valid_data).process()
         valid_data = RequestPermProcessor(view, request, valid_data).process()
         res_data = func(*args, **kwargs, valid_data=valid_data)
+        res_data = res_data if res_data is not None else {}
         res_data = ResponseProcessor(view, request, res_data).process()
         return Response(res_data)
 

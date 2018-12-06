@@ -2,6 +2,7 @@ from rest_framework.permissions import BasePermission, AllowAny
 
 from .consts import BaseConst
 from .contrib.models import User as UserM
+from .contrib.models import SToken
 
 
 _ = AllowAny
@@ -22,7 +23,7 @@ class IsSTokenAuthenticated(BasePermission):
     def has_permission(self, request, view):
         try:
             return isinstance(request.user, UserM) and \
-                   isinstance(request.stoken, request.stoken)
+                   isinstance(request.stoken, SToken)
         except:
             return False
 

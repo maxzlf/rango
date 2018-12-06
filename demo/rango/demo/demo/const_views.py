@@ -26,8 +26,7 @@ class ConfigAPIView(ConfigViewMixin, GenericAPIView):
 
 
 class PingView(ConfigAPIView):
-    get_permission_classes = (AllowAny, )
-
+    get_permission_classes = ()
 
 
     @request_wrapper
@@ -37,8 +36,8 @@ class PingView(ConfigAPIView):
 
 
 class ConstantsView(ConfigAPIView):
-    get_permission_classes = (AllowAny,)
-    post_permission_classes = (AllowAny,)
+    get_permission_classes = ()
+    post_permission_classes = ()
     serializer_classes = {'POST': config_serializers.ConstantsPostSerializer}
 
 
@@ -64,9 +63,9 @@ class ConstantsView(ConfigAPIView):
 
 
 class ConstantView(ConfigAPIView):
-    get_permission_classes = (AllowAny,)
-    put_permission_classes = (AllowAny,)
-    delete_permission_classes = (AllowAny,)
+    get_permission_classes = ()
+    put_permission_classes = ()
+    delete_permission_classes = ()
     serializer_classes = {'PUT': config_serializers.ConstantPutSerializer}
 
 
