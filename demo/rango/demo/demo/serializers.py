@@ -11,6 +11,21 @@ class ExampleSerializer(APISerializer):
 
 
 
+class ClassesPostSerializer(APISerializer):
+    class_id = serializers.UUIDField(required=False)
+    class_no = serializers.IntegerField(required=True, min_value=0)
+    is_activated = serializers.BooleanField(required=False, default=False)
+    create_time = serializers.DateTimeField(required=False)
+    update_time = serializers.DateTimeField(required=False)
+    output_only = ('class_id', 'create_time', 'update_time')
+
+
+
+class ClassesListSerializer(ListSerializer):
+    order_by_fields = ('class_no', 'create_time', 'update_time')
+
+
+
 class StudentsPostSerializer(APISerializer):
     student_id = serializers.UUIDField(required=False)
     gender = serializers.IntegerField(required=False,

@@ -15,14 +15,16 @@ class Student:
             raise errors.DataNotFoundError(msg)
 
 
-    def add(self, name, gender=0, is_activated=False):
-        params = dict(gender=gender, name=name, is_activated=is_activated)
+    def add(self, name, class_id, gender=0, is_activated=False):
+        params = dict(class_id=class_id, gender=gender,
+                      name=name, is_activated=is_activated)
         params = {k: v for k, v in params.items() if v is not None}
         return StudentM.objects.create(**params)
 
 
-    def update(self, student_id, gender, name, is_activated):
-        params = dict(gender=gender, name=name, is_activated=is_activated)
+    def update(self, student_id, class_id, gender, name, is_activated):
+        params = dict(class_id=class_id, gender=gender,
+                      name=name, is_activated=is_activated)
         params = {k: v for k, v in params.items() if v is not None}
 
         count = StudentM.objects.filter(student_id=student_id).update(**params)
@@ -39,7 +41,7 @@ class Student:
         query_set = StudentM.objects.all()
         if filters:
             params = {k: v for k, v in filters.items() if v is not None}
-            query_set = set.filter(**params)
+            query_set = query_set.filter(**params)
         total = len(query_set)
         query_set = pagination.order_and_pagination(query_set, options)
         return total, query_set
